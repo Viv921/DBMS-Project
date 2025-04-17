@@ -47,6 +47,58 @@ def sanitize_identifier(name):
         sanitized = f"tbl_{sanitized}"
     return sanitized
 
+# --- Helper to build WHERE clause string and params ---
+def build_where_clause(conditions_list):
+    """
+    Builds a WHERE clause string and parameter list from a list of condition objects.
+    Handles AND/OR connectors between conditions.
+    """
+    where_clause_parts = []
+    where_params = []
+    if not isinstance(conditions_list, list):
+        raise ValueError("WHERE conditions must be a list")
+
+    for index, condition in enumerate(conditions_list):
+        column = sanitize_identifier(condition.get('column'))
+        operator = str(condition.get('operator', '=')).strip().upper()
+        value = condition.get('value')
+        # Get connector, default to AND for conditions after the first
+        connector = str(condition.get('connector', 'AND')).strip().upper() if index > 0 else None
+
+        if not column: raise ValueError(f"Incomplete where condition (missing column): {condition}")
+        if operator not in ALLOWED_OPERATORS: raise ValueError(f"Invalid where operator: {operator}")
+        if connector and connector not in ('AND', 'OR'): raise ValueError(f"Invalid connector: {connector}")
+
+        # Add connector (AND/OR) before the condition (if not the first condition)
+        if connector:
+            where_clause_parts.append(connector)
+
+        # Build the condition part
+        safe_col_ref = f"`{column}`" # Table name comes from the main query part (FROM/UPDATE/DELETE)
+        if operator in ('IS NULL', 'IS NOT NULL'):
+            where_clause_parts.append(f"{safe_col_ref} {operator}")
+            if value is not None and value != '':
+                print(f"Warning: Value '{value}' provided for operator '{operator}' will be ignored.")
+        else:
+            where_clause_parts.append(f"{safe_col_ref} {operator} %s")
+            where_params.append(value)
+
+    if not where_clause_parts:
+        # Return empty string and list if no valid conditions were processed
+        # Let the calling function decide if an empty WHERE is allowed/required
+        return "", []
+        # Or raise ValueError("WHERE clause cannot be empty for UPDATE/DELETE operations.") if needed
+
+    # Join parts with spaces
+    # Consider adding parentheses for complex logic, but linear joining is simpler for now
+    final_where_sql = " ".join(where_clause_parts)
+
+    # Basic check for dangling connector if only one clause remained after filtering? (unlikely with UI)
+    # if final_where_sql == "AND" or final_where_sql == "OR": return "", []
+
+    return final_where_sql, where_params
+# --- End Helper ---
+
 # --- API Endpoints ---
 
 @app.route('/api/ping', methods=['GET'])
@@ -586,26 +638,14 @@ def execute_select_query():
     # --- 3. Build WHERE Clause ---
     # ... (Keep WHERE clause logic the same) ...
     # ... (Ensure tables used in WHERE are in tables_in_query) ...
-    where_clause_items = []
-    for condition in where_conditions:
-        table = sanitize_identifier(condition.get('table'))
-        column = sanitize_identifier(condition.get('column'))
-        operator = str(condition.get('operator', '=')).upper()
-        value = condition.get('value')
-
-        if not (table and column): return jsonify({"error": f"Incomplete where condition: {condition}"}), 400
-        if table not in tables_in_query: return jsonify({"error": f"WHERE condition uses table '{table}' not in FROM/JOIN clauses"}), 400
-        if operator not in ALLOWED_OPERATORS: return jsonify({"error": f"Invalid where operator: {operator}"}), 400
-
-        qualified_col = f"`{table}`.`{column}`"
-        if operator in ('IS NULL', 'IS NOT NULL'):
-            where_clause_items.append(f"{qualified_col} {operator}")
-        else:
-            where_clause_items.append(f"{qualified_col} {operator} %s")
-            params.append(value)
-
-    if where_clause_items:
-        sql_parts.append(f"WHERE {' AND '.join(where_clause_items)}")
+    if where_conditions:
+        try:
+            where_clause_sql, where_params = build_where_clause(where_conditions)
+            if where_clause_sql: # Only add WHERE if the helper returned a clause
+                sql_parts.append(f"WHERE {where_clause_sql}")
+                params.extend(where_params) # Use extend for list concatenation
+        except ValueError as ve:
+             return jsonify({"error": f"Invalid WHERE clause: {ve}"}), 400
 
 
     # --- 4. Build GROUP BY Clause ---
@@ -706,41 +746,9 @@ def execute_dml_statement():
             return jsonify({"error": "Database connection failed"}), 500
         cursor = conn.cursor()
 
-        # --- Helper to build WHERE clause string and params ---
-        def build_where_clause(conditions_list):
-            where_items = []
-            where_params = []
-            if not isinstance(conditions_list, list):
-                raise ValueError("WHERE conditions must be a list")
+        # -- Where clause --
 
-            for condition in conditions_list:
-                column = sanitize_identifier(condition.get('column'))
-                # Ensure operator is uppercase and allowed
-                operator = str(condition.get('operator', '=')).strip().upper()
-                value = condition.get('value')
-
-                if not column: raise ValueError(f"Incomplete where condition (missing column): {condition}")
-                if operator not in ALLOWED_OPERATORS: raise ValueError(f"Invalid where operator: {operator}")
-
-                # No table prefix needed as FROM/UPDATE/DELETE applies to one table
-                safe_col_ref = f"`{column}`"
-
-                if operator in ('IS NULL', 'IS NOT NULL'):
-                    # Value should be ignored for IS NULL / IS NOT NULL
-                    where_items.append(f"{safe_col_ref} {operator}")
-                    if value is not None and value != '':
-                         print(f"Warning: Value '{value}' provided for operator '{operator}' will be ignored.")
-                else:
-                    # Use placeholders for values for all other operators
-                    where_items.append(f"{safe_col_ref} {operator} %s")
-                    where_params.append(value)
-
-            if not where_items:
-                 # Safety: Prevent UPDATE/DELETE without WHERE - frontend should also check this
-                 raise ValueError("WHERE clause cannot be empty for UPDATE/DELETE operations.")
-
-            return " AND ".join(where_items), where_params
-        # --- End Helper ---
+        # -- End Where clause --
 
 
         # --- Generate SQL based on operation ---
@@ -770,36 +778,35 @@ def execute_dml_statement():
             params = params_list_of_tuples # Assign for logging/executemany
 
         elif operation == 'UPDATE':
-            if not set_data: return jsonify({"error": "Missing SET data for UPDATE operation"}), 400
-            if not where_conditions: return jsonify({"error": "Missing WHERE conditions for UPDATE operation"}), 400
-
-            set_clauses = []
-            set_values = []
-            for col, val in set_data.items():
-                safe_col = sanitize_identifier(col)
-                if not safe_col: return jsonify({"error": f"Invalid column name in SET clause: {col}"}), 400
-                set_clauses.append(f"`{safe_col}` = %s")
-                set_values.append(val)
-
+            if not set_data: return jsonify({"error": "Missing SET data for UPDATE"}), 400
+            # --- Use updated build_where_clause ---
+            if not where_conditions: return jsonify({"error": "Missing WHERE conditions for UPDATE"}), 400
             try:
                 where_clause_sql, where_params = build_where_clause(where_conditions)
+                 # Check if helper returned an empty clause (might happen if conditions were invalid)
+                if not where_clause_sql: raise ValueError("Valid WHERE conditions are required for UPDATE.")
             except ValueError as ve:
                  return jsonify({"error": f"Invalid WHERE clause: {ve}"}), 400
 
+            set_clauses = []; set_values = []
+            for col, val in set_data.items():
+                safe_col = sanitize_identifier(col);
+                if not safe_col: return jsonify({"error": f"Invalid column name in SET: {col}"}), 400
+                set_clauses.append(f"`{safe_col}` = %s"); set_values.append(val)
+
             sql = f"UPDATE `{table_name}` SET {', '.join(set_clauses)} WHERE {where_clause_sql};"
-            params = set_values + where_params # Order: SET values first, then WHERE values
+            params = set_values + where_params # Combine params
 
         elif operation == 'DELETE':
-            if not where_conditions: return jsonify({"error": "Missing WHERE conditions for DELETE operation"}), 400
-
+            if not where_conditions: return jsonify({"error": "Missing WHERE conditions for DELETE"}), 400
             try:
                 where_clause_sql, where_params = build_where_clause(where_conditions)
+                if not where_clause_sql: raise ValueError("Valid WHERE conditions are required for DELETE.")
             except ValueError as ve:
                  return jsonify({"error": f"Invalid WHERE clause: {ve}"}), 400
 
             sql = f"DELETE FROM `{table_name}` WHERE {where_clause_sql};"
             params = where_params
-
         else:
             return jsonify({"error": f"Unsupported DML operation: {operation}"}), 400
 

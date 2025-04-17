@@ -212,7 +212,7 @@ function DataSelection() {
 
   // --- NEW STATE ---
   const [joins, setJoins] = useState([]); // Array of { id, type, leftTable, leftCol, rightTable, rightCol }
-  const [whereClauses, setWhereClauses] = useState([]); // Array of { id, table, column, operator, value }
+  const [whereClauses, setWhereClauses] = useState([]); //Arry of [{ id, table, column, operator, value, connector: 'AND' | 'OR' | null }]
   const [aggregates, setAggregates] = useState([]); // Array of { id, func, table, column, alias }
   const [groupByColumns, setGroupByColumns] = useState(new Set()); // Set of "tableName.columnName"
 
@@ -348,15 +348,40 @@ function DataSelection() {
   const removeJoin = (id) => setJoins(prev => prev.filter(j => j.id !== id));
 
   // Where Clauses
-  const addWhereClause = () => setWhereClauses(prev => [...prev, { id: uuidv4(), table: '', column: '', operator: '=', value: '' }]);
+  const addWhereClause = () => setWhereClauses(prev => [
+    ...prev,
+    {
+        id: uuidv4(),
+        table: '', // Keep table for SELECT context
+        column: '',
+        operator: '=',
+        value: '',
+        connector: prev.length > 0 ? 'AND' : null // Default to AND, null for first
+    }
+  ]);
   const updateWhereClause = (id, field, value) => {
-       setWhereClauses(prev => prev.map(w => w.id === id ? { ...w, [field]: value } : w));
-       // Reset column if table changes
-       if (field === 'table') {
-           setWhereClauses(prev => prev.map(w => w.id === id ? { ...w, column: '' } : w));
-       }
+    setWhereClauses(prev => prev.map(w => {
+        if (w.id === id) {
+            const updated = { ...w, [field]: value };
+            // Reset value if operator changes to IS NULL / IS NOT NULL
+            if (field === 'operator' && (value === 'IS NULL' || value === 'IS NOT NULL')) {
+                 updated.value = '';
+            }
+            return updated;
+        }
+        return w;
+    }));
   };
-  const removeWhereClause = (id) => setWhereClauses(prev => prev.filter(w => w.id !== id));
+  const removeWhereClause = (id) => {
+    setWhereClauses(prev => {
+        const remaining = prev.filter(w => w.id !== id);
+        // Ensure the first clause always has connector: null
+        if (remaining.length > 0 && remaining[0].connector !== null) {
+            remaining[0] = { ...remaining[0], connector: null };
+        }
+        return remaining;
+    });
+  };
 
   // Aggregates
   const addAggregate = () => setAggregates(prev => [...prev, { id: uuidv4(), func: 'COUNT', table: '', column: '*', alias: '' }]);
@@ -613,7 +638,7 @@ const runQuery = useCallback(async () => {
                                   <option value="">Col</option>
                                   {join.rightTable && getColumnsForTable(join.rightTable).map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
                               </select>
-                              <button onClick={() => removeJoin(join.id)} style={{ marginLeft: '5px', color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>X</button>
+                              <button onClick={() => removeJoin(join.id)} title="Remove join" style={{ marginLeft: '5px', color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding:'0 5px' }}>X</button>
                           </div>
                       ))}
                       <button onClick={addJoin} style={{ fontSize: '0.8em' }}>+ Add Join</button>
@@ -653,35 +678,45 @@ const runQuery = useCallback(async () => {
                        {/* WHERE Clauses */}
                       <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginTop:'10px' }}>
                           <h5>Filters (WHERE)</h5>
-                           {whereClauses.map((clause) => (
-                              <div key={clause.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em' }}>
-                                  <select value={clause.table} onChange={e => updateWhereClause(clause.id, 'table', e.target.value)} style={{ maxWidth: '80px', marginRight:'3px' }}>
-                                       <option value="">Table</option>
-                                       {selectedTableNames.map(t => <option key={t} value={t}>{t}</option>)}
-                                  </select>
-                                  <select value={clause.column} onChange={e => updateWhereClause(clause.id, 'column', e.target.value)} style={{ maxWidth: '80px', marginRight:'3px' }} disabled={!clause.table}>
-                                      <option value="">Column</option>
-                                       {clause.table && getColumnsForTable(clause.table).map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
-                                  </select>
-                                  <select value={clause.operator} onChange={e => updateWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '50px', marginRight:'3px' }}>
-                                      <option value="=">=</option> <option value="!=">!=</option>
-                                      <option value=">">&gt;</option> <option value="<">&lt;</option>
-                                      <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
-                                      <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
-                                      <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
-                                  </select>
-                                  <input
-                                      type="text"
-                                      value={clause.value}
-                                      onChange={e => updateWhereClause(clause.id, 'value', e.target.value)}
-                                      placeholder="Value"
-                                      style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }}
-                                      disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'}
-                                  />
-                                  <button onClick={() => removeWhereClause(clause.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>X</button>
-                              </div>
+                           {whereClauses.map((clause, index) => ( // Get index
+                              <React.Fragment key={clause.id}>
+                                   {/* Show AND/OR selector for clauses after the first one */}
+                                   {index > 0 && (
+                                       <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em' }}>
+                                           <select
+                                               value={clause.connector || 'AND'} // Default display to AND
+                                               onChange={e => updateWhereClause(clause.id, 'connector', e.target.value)}
+                                               style={{ padding:'2px', marginRight:'5px'}}
+                                           >
+                                               <option value="AND">AND</option>
+                                               <option value="OR">OR</option>
+                                           </select>
+                                            <span>Condition {index + 1}:</span>
+                                       </div>
+                                   )}
+                                   {/* The condition itself */}
+                                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                      <select value={clause.table} onChange={e => updateWhereClause(clause.id, 'table', e.target.value)} style={{ maxWidth: '80px', marginRight:'3px' }}>
+                                           <option value="">Table</option>
+                                           {selectedTableNames.map(t => <option key={t} value={t}>{t}</option>)}
+                                      </select>
+                                      <select value={clause.column} onChange={e => updateWhereClause(clause.id, 'column', e.target.value)} style={{ maxWidth: '80px', marginRight:'3px' }} disabled={!clause.table}>
+                                          <option value="">Column</option>
+                                           {clause.table && getColumnsForTable(clause.table).map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
+                                      </select>
+                                      <select value={clause.operator} onChange={e => updateWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '70px', marginRight:'3px' }}>
+                                          <option value="=">=</option> <option value="!=">!=</option>
+                                          <option value=">">&gt;</option> <option value="<">&lt;</option>
+                                          <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
+                                          <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
+                                          <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
+                                      </select>
+                                      <input type="text" value={clause.value} onChange={e => updateWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
+                                      <button onClick={() => removeWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
+                                  </div>
+                              </React.Fragment>
                           ))}
-                          <button onClick={addWhereClause} style={{ fontSize: '0.8em' }}>+ Add Filter</button>
+                          <button onClick={addWhereClause} style={{ fontSize: '0.8em', marginLeft: '20px' }}>+ Add Filter Condition</button>
                       </div>
                   </div>
               )}
@@ -704,7 +739,6 @@ const runQuery = useCallback(async () => {
                               </select>
                               .
                               <select value={agg.column} onChange={e => updateAggregate(agg.id, 'column', e.target.value)} style={{ maxWidth: '80px', margin:'0 3px' }} disabled={!agg.table}>
-                                   {/* Allow '*' for COUNT, otherwise list columns */}
                                   <option value="*">* (All)</option>
                                    {agg.table && getColumnsForTable(agg.table).map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
                               </select>
@@ -715,7 +749,7 @@ const runQuery = useCallback(async () => {
                                   placeholder="alias (optional)"
                                   style={{ flexGrow: 1, marginLeft:'3px', marginRight:'3px', minWidth:'50px' }}
                               />
-                              <button onClick={() => removeAggregate(agg.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>X</button>
+                              <button onClick={() => removeAggregate(agg.id)} title="Remove aggregate" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
                           </div>
                        ))}
                       <button onClick={addAggregate} style={{ fontSize: '0.8em' }}>+ Add Aggregate</button>
@@ -740,7 +774,7 @@ const runQuery = useCallback(async () => {
                                    </label>
                                </li>
                            ))}
-                            {getGroupableColumns().length === 0 && <li style={{fontSize:'0.9em', color:'#888'}}>No columns available to group by (select non-aggregated columns).</li>}
+                            {getGroupableColumns().length === 0 && aggregates.length > 0 && <li style={{fontSize:'0.9em', color:'#888'}}>No columns available to group by (select non-aggregated columns).</li>}
                        </ul>
                   </div>
               )}
@@ -755,7 +789,6 @@ const runQuery = useCallback(async () => {
               {/* Query Button */}
               {/* Sticky container for the query button */}
                 <div style={{
-                    // Remove marginTop: 'auto'
                     position: 'sticky',          // Make the container stick
                     bottom: 0,                 // Stick it to the bottom of the scrolling parent
                     background: 'white',       // Add a background color
@@ -765,55 +798,39 @@ const runQuery = useCallback(async () => {
                  }}>
                     <button
                         onClick={runQuery}
-                        style={{ width: '100%', padding: '12px 0' }}
-                        // Updated disabled condition:
+                        style={{ width: '100%', padding: '12px 0' }} // Adjusted height
                         disabled={
                             Object.keys(selectedTables).length === 0 || // No tables selected
                             isQuerying || // Query already running
                             isAnyTableLoading || // Details are loading
-                            requiresJoin // <<-- Add this check
+                            requiresJoin // Require joins if multiple tables selected
                         }
                     >
                         {isQuerying ? 'Running...' : 'Run Query'}
                     </button>
-                     {/* Optional: Show loading indicator */}
                      {isAnyTableLoading && <p style={{fontSize: '0.8em', color: '#888', textAlign:'center'}}>Loading table details...</p>}
                 </div>
             </div>
 
           {/* Main Content Area - Results */}
-          <div style={{ flexGrow: 1, padding: '10px', overflow: 'auto' }}> {/* Make results scrollable too */}
+          <div style={{ flexGrow: 1, padding: '10px', overflow: 'auto' }}>
               <h2>Query Results</h2>
               {isQuerying && <p>Executing query...</p>}
               {queryError && <p style={{ color: 'red' }}>Query Error: {queryError}</p>}
               {queryResults ? (
                   queryResults.rows && queryResults.rows.length > 0 ? (
-                   <table border="1" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                   <table border="1" style={{ borderCollapse: 'collapse', width: '100%', marginTop: '15px' }}>
                        <thead>
-                           <tr>
-                               {queryResults.columns.map((colName, index) => <th key={index}>{colName}</th>)}
-                           </tr>
+                           <tr>{queryResults.columns.map((colName, index) => <th key={index}>{colName}</th>)}</tr>
                        </thead>
                        <tbody>
                            {queryResults.rows.map((row, rowIndex) => (
-                               <tr key={rowIndex}>
-                                   {row.map((cell, cellIndex) => <td key={cellIndex}>{cell === null ? <i>NULL</i> : String(cell)}</td>)}
-                               </tr>
+                               <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell === null ? <i>NULL</i> : String(cell)}</td>)}</tr>
                            ))}
                        </tbody>
                    </table>
-                  ) : ( <p>Query executed successfully, but returned no rows.</p> )
-              ) : (
-                  !isQuerying && !queryError && <p>Define your query using the sidebar and click "Run Query".</p>
-              )}
-               {/* Debug view of state */}
-               {/* <pre style={{fontSize:'0.7em', background:'#f0f0f0', marginTop:'20px'}}>
-                    State Debug:
-                    Joins: {JSON.stringify(joins, null, 2)}
-                    Where: {JSON.stringify(whereClauses, null, 2)}
-                    Aggregates: {JSON.stringify(aggregates, null, 2)}
-                    Group By: {JSON.stringify(Array.from(groupByColumns), null, 2)}
-               </pre> */}
+                  ) : ( <p style={{marginTop:'15px'}}>Query executed successfully, but returned no rows.</p> )
+              ) : ( !isQuerying && !queryError && <p style={{marginTop:'15px'}}>Define your query using the sidebar and click "Run Query".</p> )}
           </div>
       </div>
   );
@@ -836,7 +853,7 @@ function CrudOperations() {
   // UPDATE: [{id: uuid, set_col1: 'new1', set_col2: 'new2'}] (UI uses first row)
 
   // State for WHERE clauses in UPDATE/DELETE
-  const [dmlWhereClauses, setDmlWhereClauses] = useState([]); // [{ id, column, operator, value }]
+  const [dmlWhereClauses, setDmlWhereClauses] = useState([]); // Now: [{ id, column, operator, value, connector: 'AND' | 'OR' | null }]
 
 
   const [tableDisplayData, setTableDisplayData] = useState(null); // { columns: [], rows: [] }
@@ -938,15 +955,39 @@ function CrudOperations() {
   };
 
   // --- Handlers for DML WHERE Clauses ---
-  const addDmlWhereClause = () => setDmlWhereClauses(prev => [...prev, { id: uuidv4(), column: '', operator: '=', value: '' }]);
+  const addDmlWhereClause = () => setDmlWhereClauses(prev => [
+    ...prev,
+    {
+        id: uuidv4(),
+        column: '',
+        operator: '=',
+        value: '',
+        connector: prev.length > 0 ? 'AND' : null // Default to AND, null for first
+    }
+  ]);
+
   const updateDmlWhereClause = (id, field, value) => {
-       setDmlWhereClauses(prev => prev.map(w => w.id === id ? { ...w, [field]: value } : w));
-       // Reset value if operator changes to IS NULL / IS NOT NULL
-       if (field === 'operator' && (value === 'IS NULL' || value === 'IS NOT NULL')) {
-            setDmlWhereClauses(prev => prev.map(w => w.id === id ? { ...w, value: '' } : w));
-       }
+      setDmlWhereClauses(prev => prev.map(w => {
+          if (w.id === id) {
+              const updated = { ...w, [field]: value };
+              if (field === 'operator' && (value === 'IS NULL' || value === 'IS NOT NULL')) {
+                    updated.value = '';
+              }
+              return updated;
+          }
+          return w;
+      }));
   };
-  const removeDmlWhereClause = (id) => setDmlWhereClauses(prev => prev.filter(w => w.id !== id));
+
+  const removeDmlWhereClause = (id) => {
+      setDmlWhereClauses(prev => {
+          const remaining = prev.filter(w => w.id !== id);
+          if (remaining.length > 0 && remaining[0].connector !== null) {
+              remaining[0] = { ...remaining[0], connector: null };
+          }
+          return remaining;
+      });
+  };
 
   // Add/Remove Row Handlers for INSERT
   const addRow = () => {
@@ -1000,10 +1041,9 @@ function CrudOperations() {
 
       // Safety Check: Require at least one WHERE clause for UPDATE/DELETE
       const validWhereClauses = dmlWhereClauses.filter(w=>w.column && w.operator);
-      if ((crudOperation === 'UPDATE' || crudOperation === 'DELETE') && validWhereClauses.length === 0) {
-          setError(`WHERE condition(s) are required for ${crudOperation}. Add conditions to specify which rows to affect.`);
-          return;
-      }
+         if ((crudOperation === 'UPDATE' || crudOperation === 'DELETE') && validWhereClauses.length === 0) {
+             setError(`WHERE condition(s) are required for ${crudOperation}.`); return;
+         }
 
       setIsExecuting(true); setError(null); setSuccessMessage(null);
 
@@ -1120,78 +1160,117 @@ function CrudOperations() {
 
           case 'UPDATE':
                const firstRowForUpdate = rowsData[0] || {}; // UI uses first row for SET values
-               return (
-                  <div>
-                      {/* WHERE Clause Builder */}
-                      <div style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
-                         <h5>WHERE Conditions (Required):</h5>
-                         <p style={{fontSize:'0.8em', color:'orange'}}>Warning: Ensure conditions accurately target ONLY rows you intend to update.</p>
-                          {dmlWhereClauses.map((clause) => (
-                              <div key={clause.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em' }}>
-                                  <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
-                                      <option value="">Column</option>
-                                      {tableColumns.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
-                                  </select>
-                                  <select value={clause.operator} onChange={e => updateDmlWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '70px', marginRight:'3px', flexShrink: 0 }}>
-                                      <option value="=">=</option> <option value="!=">!=</option>
-                                      <option value=">">&gt;</option> <option value="<">&lt;</option>
-                                      <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
-                                      <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
-                                      <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
-                                  </select>
-                                  <input type="text" value={clause.value} onChange={e => updateDmlWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
-                                  <button onClick={() => removeDmlWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
-                              </div>
-                          ))}
-                          <button onClick={addDmlWhereClause} style={{ fontSize: '0.8em' }}>+ Add WHERE Condition</button>
-                      </div>
+                 return (
+                    <div>
+                        {/* WHERE Clause Builder */}
+                        <div style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '10px' }}>
+                           <h5>WHERE Conditions (Required):</h5>
+                           <p style={{fontSize:'0.8em', color:'orange'}}>Warning: Ensure conditions accurately target ONLY rows you intend to update.</p>
+                            {/* Map over dmlWhereClauses to render each condition row */}
+                            {dmlWhereClauses.map((clause, index) => (
+                                <React.Fragment key={clause.id}>
+                                    {/* Render AND/OR selector between conditions */}
+                                    {index > 0 && (
+                                        <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em' }}>
+                                            <select
+                                                value={clause.connector || 'AND'}
+                                                onChange={e => updateDmlWhereClause(clause.id, 'connector', e.target.value)}
+                                                style={{ padding:'2px', marginRight:'5px'}}
+                                            >
+                                                <option value="AND">AND</option>
+                                                <option value="OR">OR</option>
+                                            </select>
+                                             <span>Condition {index + 1}:</span>
+                                        </div>
+                                    )}
+                                    {/* Render inputs for the condition */}
+                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                        {/* Column Dropdown */}
+                                        <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
+                                            <option value="">Column</option>
+                                            {tableColumns.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
+                                        </select>
+                                        {/* Operator Dropdown */}
+                                        <select value={clause.operator} onChange={e => updateDmlWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '70px', marginRight:'3px', flexShrink: 0 }}>
+                                            <option value="=">=</option> <option value="!=">!=</option>
+                                            <option value=">">&gt;</option> <option value="<">&lt;</option>
+                                            <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
+                                            <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
+                                            <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
+                                        </select>
+                                        {/* Value Input */}
+                                        <input type="text" value={clause.value} onChange={e => updateDmlWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
+                                        {/* Remove Button */}
+                                        <button onClick={() => removeDmlWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
+                                    </div>
+                                </React.Fragment>
+                            ))}
+                            {/* Button to add a new WHERE condition */}
+                            <button onClick={addDmlWhereClause} style={{ fontSize: '0.8em', marginLeft: '20px' }}>+ Add WHERE Condition</button>
+                        </div>
 
-                      {/* SET Clause Inputs */}
-                      <h5>New Values (SET):</h5>
-                      {tableColumns.map(col => (
-                          <div key={`set_${col.name}`} style={{ marginBottom: '8px' }}>
-                              <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em' }}>
-                                  {col.name} <span style={{ color: '#777' }}>({col.type})</span> {col.isPK && <span style={{ color: 'purple', fontWeight:'bold' }}> (PK - Caution!)</span>}
-                              </label>
-                              <input
-                                  type={col.type.includes('INT') ? 'number' : col.type.includes('DATE') ? 'date' : 'text'}
-                                  name={col.name}
-                                  value={firstRowForUpdate[col.name] || ''} // Use first row state
-                                  onChange={(e) => handleInputChange(0, col.name, e.target.value)} // Update first row state
-                                  style={{ width: '95%', padding: '4px' }}
-                                  placeholder={`New value for ${col.name} (leave blank to ignore)`}
-                              />
-                          </div>
-                      ))}
-                  </div>
-              );
-
+                        {/* SET Clause Inputs */}
+                        <h5>New Values (SET):</h5>
+                        {/* Map over table columns to render inputs for SET values */}
+                        {tableColumns.map(col => (
+                            <div key={`set_${col.name}`} style={{ marginBottom: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em' }}>
+                                    {col.name} <span style={{ color: '#777' }}>({col.type})</span> {col.isPK && <span style={{ color: 'purple', fontWeight:'bold' }}> (PK - Caution!)</span>}
+                                </label>
+                                <input
+                                    type={col.type.includes('INT') ? 'number' : col.type.includes('DATE') ? 'date' : 'text'}
+                                    name={col.name}
+                                    value={firstRowForUpdate[col.name] || ''} // Value from first row state
+                                    onChange={(e) => handleInputChange(0, col.name, e.target.value)} // Update first row state
+                                    style={{ width: '95%', padding: '4px' }}
+                                    placeholder={`New value for ${col.name} (leave blank to ignore)`}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                );
           case 'DELETE':
-              return (
-                  <div>
-                      {/* WHERE Clause Builder */}
-                      <h5>WHERE Conditions (Required):</h5>
-                      <p style={{fontSize:'0.8em', color:'red'}}>Warning: Deletion is permanent! Ensure conditions accurately target ONLY rows you intend to delete.</p>
-                       {dmlWhereClauses.map((clause) => (
-                           <div key={clause.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em' }}>
-                               <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
-                                   <option value="">Column</option>
-                                   {tableColumns.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
-                               </select>
-                               <select value={clause.operator} onChange={e => updateDmlWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '70px', marginRight:'3px', flexShrink: 0 }}>
-                                   <option value="=">=</option> <option value="!=">!=</option>
-                                   <option value=">">&gt;</option> <option value="<">&lt;</option>
-                                   <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
-                                   <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
-                                   <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
-                               </select>
-                               <input type="text" value={clause.value} onChange={e => updateDmlWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
-                               <button onClick={() => removeDmlWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
-                           </div>
-                       ))}
-                       <button onClick={addDmlWhereClause} style={{ fontSize: '0.8em' }}>+ Add WHERE Condition</button>
-                  </div>
-              );
+            return (
+              <div>
+                  {/* WHERE Clause Builder */}
+                  <h5>WHERE Conditions (Required):</h5>
+                  <p style={{fontSize:'0.8em', color:'red'}}>Warning: Deletion is permanent! Ensure conditions accurately target ONLY rows you intend to delete.</p>
+                   {/* Map over dmlWhereClauses to render each condition row */}
+                   {dmlWhereClauses.map((clause, index) => (
+                        <React.Fragment key={clause.id}>
+                             {/* Render AND/OR selector */}
+                              {index > 0 && (
+                                  <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em' }}>
+                                      <select value={clause.connector || 'AND'} onChange={e => updateDmlWhereClause(clause.id, 'connector', e.target.value)} style={{ padding:'2px', marginRight:'5px'}}> <option value="AND">AND</option> <option value="OR">OR</option> </select>
+                                       <span>Condition {index + 1}:</span>
+                                  </div>
+                              )}
+                              {/* Render inputs for the condition */}
+                              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                  {/* Column Dropdown */}
+                                   <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
+                                       <option value="">Column</option>
+                                       {tableColumns.map(col => <option key={col.name} value={col.name}>{col.name}</option>)}
+                                   </select>
+                                   {/* Operator Dropdown */}
+                                   <select value={clause.operator} onChange={e => updateDmlWhereClause(clause.id, 'operator', e.target.value)} style={{ width: '70px', marginRight:'3px', flexShrink: 0 }}>
+                                       <option value="=">=</option> <option value="!=">!=</option>
+                                       <option value=">">&gt;</option> <option value="<">&lt;</option>
+                                       <option value=">=">&gt;=</option> <option value="<=">&lt;=</option>
+                                       <option value="LIKE">LIKE</option> <option value="NOT LIKE">NOT LIKE</option>
+                                       <option value="IS NULL">IS NULL</option> <option value="IS NOT NULL">IS NOT NULL</option>
+                                   </select>
+                                   {/* Value Input */}
+                                   <input type="text" value={clause.value} onChange={e => updateDmlWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
+                                   {/* Remove Button */}
+                                   <button onClick={() => removeDmlWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
+                              </div>
+                        </React.Fragment>
+                   ))}
+                   {/* Button to add a new WHERE condition */}
+                   <button onClick={addDmlWhereClause} style={{ fontSize: '0.8em', marginLeft: '20px' }}>+ Add WHERE Condition</button>
+              </div>
+          );
           default:
               return null;
       }
