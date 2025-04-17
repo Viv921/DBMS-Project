@@ -5,6 +5,7 @@ from flask_cors import CORS # Import CORS
 import mysql.connector
 from mysql.connector import Error
 from collections import defaultdict # For grouping columns by table
+from itertools import chain, combinations # For closure/key algorithms
 
 # Load environment variables from .env file
 load_dotenv()
@@ -856,7 +857,298 @@ def execute_dml_statement():
             conn.close()
             print("MySQL connection closed after DML execution")
 
+def get_table_schema_details(table_name):
+    """ Helper to fetch columns and designated primary key. """
+    safe_table_name = sanitize_identifier(table_name)
+    if not safe_table_name:
+        raise ValueError("Invalid table name provided")
 
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if not conn or not conn.is_connected():
+            raise ConnectionError("Database connection failed")
+
+        cursor = conn.cursor(dictionary=True)
+
+        # Get Columns (similar to get_table_details endpoint)
+        cursor.execute(f"DESCRIBE `{safe_table_name}`;")
+        cols_raw = cursor.fetchall()
+        if not cols_raw:
+             raise ValueError(f"Table '{safe_table_name}' not found or has no columns.")
+
+        attributes_info = {}
+        all_attributes = set()
+        pk_columns = set()
+        for col in cols_raw:
+            col_name = col.get('Field')
+            if not col_name: continue
+            safe_col_name = sanitize_identifier(col_name) # Should match schema name
+            all_attributes.add(safe_col_name)
+            attributes_info[safe_col_name] = {
+                "name": safe_col_name,
+                "type": col.get('Type', ''),
+                "isPK": col.get('Key') == 'PRI'
+                # Add other info if needed
+            }
+            if col.get('Key') == 'PRI':
+                pk_columns.add(safe_col_name)
+
+        if not pk_columns:
+            # Handle tables without a designated PK? For normalization, PK is usually essential.
+            print(f"Warning: Table '{safe_table_name}' has no designated Primary Key.")
+            # raise ValueError(f"Table '{safe_table_name}' must have a Primary Key for normalization analysis.")
+
+
+        return list(all_attributes), list(pk_columns), attributes_info
+
+    except Error as e:
+        raise ConnectionError(f"Database error fetching schema for {safe_table_name}: {e}")
+    finally:
+        if cursor: cursor.close()
+        if conn and conn.is_connected(): conn.close()
+
+def calculate_closure(attributes_to_close, fds_dict, all_attributes):
+    """ Calculates the attribute closure (X+) using basic iterative approach. """
+    closure = set(attributes_to_close)
+    changed = True
+    while changed:
+        changed = False
+        for determinant_tuple, dependents in fds_dict.items():
+            determinant_set = set(determinant_tuple)
+            # If determinant is subset of current closure AND
+            # there are dependents not yet in closure
+            if determinant_set.issubset(closure) and not dependents.issubset(closure):
+                new_attributes = dependents - closure
+                if new_attributes:
+                    closure.update(new_attributes)
+                    changed = True
+    return closure
+
+def find_candidate_keys(attributes, fds_dict):
+     """ Basic algorithm to find candidate keys (can be computationally expensive). """
+     all_attributes_set = set(attributes)
+     candidate_keys = []
+
+     # Generate power set of attributes (potential keys)
+     # Start from smaller sets first
+     for k in range(1, len(attributes) + 1):
+         possible_keys = combinations(attributes, k)
+         found_superkey_at_this_level = False
+
+         for key_tuple in possible_keys:
+             key_set = set(key_tuple)
+             closure = calculate_closure(key_set, fds_dict, all_attributes_set)
+
+             # Check if it's a superkey
+             if closure == all_attributes_set:
+                 found_superkey_at_this_level = True
+                 # Check if it's minimal (no proper subset is also a superkey)
+                 is_minimal = True
+                 for ck in candidate_keys:
+                     # If an existing CK is a subset of this new key, it's not minimal
+                     if set(ck).issubset(key_set):
+                         is_minimal = False
+                         break
+                 if is_minimal:
+                     # Remove any existing superkeys that contain this new minimal key
+                     candidate_keys = [ck for ck in candidate_keys if not key_set.issubset(set(ck))]
+                     candidate_keys.append(key_tuple) # Add the new minimal key
+
+         # Optimization: If we found superkeys at level k, no need to check level k+1 subsets of those
+         # (More complex optimization: Pruning based on non-prime attributes)
+         if found_superkey_at_this_level and candidate_keys:
+              pass # Continue checking larger sets that might be minimal due to different combinations
+
+     # Return sorted list of tuples for consistency
+     return sorted([tuple(sorted(ck)) for ck in candidate_keys])
+
+
+# --- NEW Normalization Analysis Endpoint ---
+@app.route('/api/analyze_normalization', methods=['POST'])
+def analyze_normalization():
+    if not request.is_json: return jsonify({"error": "Request must be JSON"}), 400
+    payload = request.get_json()
+    if not payload: return jsonify({"error": "No JSON data received"}), 400
+
+    table_name = payload.get('table')
+    user_fds_raw = payload.get('fds', []) # Expecting list like [{determinants: [col], dependents: [col]}, ...]
+
+    if not table_name: return jsonify({"error": "Missing table name"}), 400
+
+    results = {
+        "tableName": table_name,
+        "primaryKey": [],
+        "candidateKeys": [],
+        "analysis": {
+            "1NF": {"status": "ASSUMED_COMPLIANT", "message": "Relational databases generally enforce atomicity.", "violations": []},
+            "2NF": {"status": "NOT_CHECKED", "message": "Requires PK and FDs.", "violations": []},
+            "3NF": {"status": "NOT_CHECKED", "message": "Requires PK and FDs.", "violations": []},
+            "BCNF": {"status": "NOT_CHECKED", "message": "Requires Candidate Keys and FDs.", "violations": []}
+        },
+        "notes": [],
+        "error": None
+    }
+
+    try:
+        # 1. Get Schema Details
+        all_attributes_list, pk_columns_list, attributes_info = get_table_schema_details(table_name)
+        all_attributes = set(all_attributes_list)
+        pk_set = frozenset(pk_columns_list) # Use frozenset for dict keys
+        results["primaryKey"] = sorted(pk_columns_list)
+
+        if not pk_set:
+            results["error"] = "Designated Primary Key is required for standard normalization analysis."
+            # Allow continuing for 1NF check? Maybe not useful.
+            return jsonify(results), 400
+
+
+        # 2. Process Functional Dependencies
+        # FDs stored as dict: { frozenset(determinants): set(dependents) }
+        processed_fds = {}
+
+        # Add FD implied by Primary Key (PK determines all other attributes)
+        non_pk_attributes = all_attributes - pk_set
+        if pk_set and non_pk_attributes:
+             processed_fds[pk_set] = non_pk_attributes
+
+        # Add user-defined FDs (validate them)
+        for fd in user_fds_raw:
+            determinants_raw = fd.get('determinants', [])
+            dependents_raw = fd.get('dependents', []) # Expecting list of single dependent for now based on UI plan
+
+            if not determinants_raw or not dependents_raw:
+                raise ValueError(f"Invalid FD format received: {fd}")
+
+            # Sanitize and validate columns exist in the table
+            determinants = frozenset(sanitize_identifier(d) for d in determinants_raw)
+            dependents = set(sanitize_identifier(dep) for dep in dependents_raw)
+
+            if not determinants.issubset(all_attributes):
+                raise ValueError(f"Determinant column(s) not found in table: {determinants - all_attributes}")
+            if not dependents.issubset(all_attributes):
+                 raise ValueError(f"Dependent column(s) not found in table: {dependents - all_attributes}")
+            if not dependents.isdisjoint(determinants): # Ensure LHS and RHS are disjoint
+                raise ValueError(f"FD cannot have same attribute on both sides: {fd}")
+
+            # Add or merge with existing determinants
+            if determinants in processed_fds:
+                processed_fds[determinants].update(dependents)
+            else:
+                processed_fds[determinants] = dependents
+
+
+        # 3. Find Candidate Keys (Essential for accurate checks)
+        # Note: This can be slow for tables with many attributes/FDs
+        print("Finding candidate keys...") # Debug
+        candidate_keys_tuples = find_candidate_keys(all_attributes_list, processed_fds)
+        candidate_keys_sets = [frozenset(ck) for ck in candidate_keys_tuples]
+        results["candidateKeys"] = [sorted(list(ck)) for ck in candidate_keys_sets]
+        print(f"Found Candidate Keys: {results['candidateKeys']}") # Debug
+
+        if not candidate_keys_sets:
+             # This shouldn't happen if PK exists, but check anyway
+             raise ValueError("Could not determine any Candidate Keys for the table.")
+
+        prime_attributes = set(chain.from_iterable(candidate_keys_sets))
+        non_prime_attributes = all_attributes - prime_attributes
+
+        # 4. Perform Normalization Checks
+
+        # --- 1NF --- (Remains basic assumption)
+        results["analysis"]["1NF"]["message"] = "Assumed compliant (atomic values enforced by RDBMS)."
+
+        # --- 2NF --- (No partial dependencies)
+        is_2nf = True
+        results["analysis"]["2NF"]["status"] = "COMPLIANT"
+        results["analysis"]["2NF"]["message"] = "No partial dependencies found."
+        for ck_set in candidate_keys_sets:
+            # Check only if CK is composite
+            if len(ck_set) > 1:
+                # Check subsets of the candidate key
+                for k in range(1, len(ck_set)):
+                    subsets = combinations(ck_set, k)
+                    for subset_tuple in subsets:
+                        subset_set = frozenset(subset_tuple)
+                        subset_closure = calculate_closure(subset_set, processed_fds, all_attributes)
+                        # Check if closure contains any non-prime attribute
+                        partially_determined_non_primes = subset_closure.intersection(non_prime_attributes)
+                        if partially_determined_non_primes:
+                             is_2nf = False
+                             violation_str = f"Partial Dependency: {{{', '.join(sorted(subset_set))}}} -> {{{', '.join(sorted(partially_determined_non_primes))}}} (violates dependency on CK {{{', '.join(sorted(ck_set))}}})"
+                             if violation_str not in results["analysis"]["2NF"]["violations"]:
+                                 results["analysis"]["2NF"]["violations"].append(violation_str)
+
+        if not is_2nf:
+             results["analysis"]["2NF"]["status"] = "VIOLATION_DETECTED"
+             results["analysis"]["2NF"]["message"] = "Partial dependencies found (non-prime attributes depend on only part of a candidate key)."
+
+        # --- 3NF --- (No transitive dependencies)
+        is_3nf = True
+        results["analysis"]["3NF"]["status"] = "COMPLIANT"
+        results["analysis"]["3NF"]["message"] = "No transitive dependencies found."
+        # Rule: For every non-trivial FD X -> A, either X is a superkey OR A is prime.
+        for determinant_set, dependents_set in processed_fds.items():
+             determinant_closure = calculate_closure(determinant_set, processed_fds, all_attributes)
+             is_superkey = (determinant_closure == all_attributes)
+
+             if not is_superkey:
+                 # Check dependents
+                 for dependent in dependents_set:
+                     if dependent not in determinant_set: # Ensure non-trivial A
+                        is_prime = (dependent in prime_attributes)
+                        if not is_prime:
+                             # Violation: X is not superkey and A is not prime
+                             is_3nf = False
+                             violation_str = f"Transitive Dependency: {{{', '.join(sorted(determinant_set))}}} -> {{{dependent}}} (Determinant is not superkey, Dependent is not prime)"
+                             if violation_str not in results["analysis"]["3NF"]["violations"]:
+                                 results["analysis"]["3NF"]["violations"].append(violation_str)
+
+        if not is_3nf:
+            results["analysis"]["3NF"]["status"] = "VIOLATION_DETECTED"
+            results["analysis"]["3NF"]["message"] = "Transitive dependencies found (non-prime attributes depend on other non-prime attributes)."
+
+
+        # --- BCNF --- (Every determinant must be a superkey)
+        is_bcnf = True
+        results["analysis"]["BCNF"]["status"] = "COMPLIANT"
+        results["analysis"]["BCNF"]["message"] = "All determinants are superkeys."
+        for determinant_set, dependents_set in processed_fds.items():
+            # Check non-trivial FDs only
+            if not dependents_set.issubset(determinant_set):
+                determinant_closure = calculate_closure(determinant_set, processed_fds, all_attributes)
+                is_superkey = (determinant_closure == all_attributes)
+                if not is_superkey:
+                    is_bcnf = False
+                    dependent_part = dependents_set - determinant_set
+                    violation_str = f"BCNF Violation: Determinant {{{', '.join(sorted(determinant_set))}}} is not a superkey (determines {{{', '.join(sorted(dependent_part))}}})"
+                    if violation_str not in results["analysis"]["BCNF"]["violations"]:
+                        results["analysis"]["BCNF"]["violations"].append(violation_str)
+
+        if not is_bcnf:
+            results["analysis"]["BCNF"]["status"] = "VIOLATION_DETECTED"
+            results["analysis"]["BCNF"]["message"] = "BCNF violation(s) found (determinant of an FD is not a superkey)."
+        # Ensure 3NF implies BCNF if 3NF failed
+        if not is_3nf and is_bcnf: # Should not happen if logic is correct, but as safety
+             pass # BCNF is stricter
+
+
+        # Add general notes
+        results["notes"].append("Analysis based on schema, designated PK, and user-provided FDs.")
+        if not results["candidateKeys"] or len(results["candidateKeys"]) <= 1:
+             results["notes"].append("Full accuracy requires identifying ALL candidate keys. Ensure all relevant FDs were provided.")
+
+        return jsonify(results), 200
+
+    except (ConnectionError, ValueError, Error) as e: # Catch specific errors
+        print(f"Error during normalization analysis for table '{table_name}': {e}")
+        results["error"] = str(e)
+        return jsonify(results), 400 # Return 400 for client/schema errors
+    except Exception as ex:
+         print(f"Unexpected Error during normalization analysis: {ex}")
+         results["error"] = f"An unexpected server error occurred: {ex}"
+         return jsonify(results), 500
 
 
 if __name__ == '__main__':
