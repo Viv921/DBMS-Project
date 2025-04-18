@@ -1,38 +1,349 @@
+/* App.css */
+
+/* Overall App Layout */
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Navigation */
+.app-nav {
+  background-color: #343a40; /* Dark background for nav */
+  padding: 10px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.app-nav li {
+  margin-right: 20px;
+  margin-bottom: 0; /* Override default li margin */
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.app-nav a {
+  color: #f8f9fa; /* Light text for links */
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+
+.app-nav a:hover,
+.app-nav a.active { /* You might need to use NavLink from react-router-dom for active class */
+  color: #ffffff;
+  border-bottom-color: #007bff; /* Highlight active/hover */
+}
+
+/* Main Content Area */
+.app-content {
+  flex-grow: 1; /* Allows content to fill remaining space */
+  padding: 20px;
+  background-color: #ffffff; /* White background for content area */
+  margin: 20px; /* Add some margin around the content */
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific Component Layouts */
+.component-layout {
+  display: flex;
+  height: calc(100vh - 150px); /* Adjust based on nav/footer height */
+  gap: 20px; /* Space between sidebar and main content */
+}
+
+.sidebar {
+  width: 300px; /* Fixed width sidebar */
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  overflow-y: auto; /* Scroll if content overflows */
+  background-color: #f8f9fa; /* Light gray for sidebar */
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h3, .sidebar h4, .sidebar h5 {
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+}
+
+.sidebar-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.sidebar-sticky-bottom {
+  margin-top: auto; /* Pushes this section to the bottom */
+  padding-top: 15px;
+  border-top: 1px solid #dee2e6;
+  background-color: #f8f9fa; /* Match sidebar background */
+  position: sticky;
+  bottom: 0; /* Stick to the bottom of the sidebar container */
+}
+
+.main-content {
+  flex-grow: 1; /* Takes remaining space */
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  overflow: auto; /* Scroll if content overflows */
+  background-color: #ffffff;
+}
+
+.main-content h2 {
+    margin-bottom: 1.5rem;
+}
+
+.existing-tables-palette {
+  border: 1px solid #dee2e6; /* Use consistent border */
+  border-radius: 5px;      /* Consistent border radius */
+  padding: 15px;
+  background-color: #f8f9fa; /* Light background */
+  margin-top: 20px; /* Add some space above */
+}
+
+.existing-tables-palette h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ced4da; /* Separator line */
+  font-size: 1.1rem;
+  color: #495057;
+}
+
+/* Container for the table buttons */
+.existing-tables-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; /* Spacing between buttons */
+}
+
+/* Styling for individual table buttons in the palette */
+.existing-table-button {
+  /* Inherits base button styles, add specifics */
+  background-color: #6c757d;  /* Secondary/grey color */
+  border-color: #6c757d;
+  color: #fff;
+  padding: 5px 12px;
+  font-size: 0.9em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.existing-table-button:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+  transform: translateY(-1px); /* Subtle lift effect */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.existing-table-button:active {
+    transform: translateY(0px); /* Remove lift on click */
+}
+
+/* Optional: Style for the 'no tables found' message */
+.no-existing-tables-message {
+    font-style: italic;
+    color: #6c757d; /* Match button color */
+}
+
+
+/* TableNode Specific Styling (Move from TableNode.js) */
+.table-node {
+  border: 1px solid #adb5bd; /* Slightly softer border */
+  padding: 15px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #ffffff, #e6e6e6); /* Subtle gradient */
+  box-shadow: 3px 3px 5px #cccccc, -3px -3px 5px #ffffff;
+  min-width: 250px;
+  font-size: 0.9rem;
+}
+
+.table-node input[type="text"],
+.table-node select {
+  width: 100%; /* Make inputs/selects fill container */
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.table-node-header {
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-node-attributes-title {
+  margin-bottom: 8px;
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #495057;
+}
+
+.table-node-attribute-row {
+  display: grid; /* Use grid for better alignment */
+  grid-template-columns: 1fr 1fr auto auto; /* Adjust columns as needed */
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 5px;
+  border-radius: 4px;
+  background-color: rgba(0,0,0,0.02);
+}
+.table-node-attribute-row:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.table-node-attribute-row input[type="text"],
+.table-node-attribute-row select {
+    width: auto; /* Override width */
+    margin-bottom: 0; /* Override margin */
+}
+
+.table-node-constraints {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Spacing between constraints */
+}
+
+.table-node-constraints label {
+  font-size: 0.8em;
+  margin: 0;
+  display: inline-flex; /* Align checkbox and text */
+  align-items: center;
+  cursor: pointer;
+}
+.table-node-constraints input[type="checkbox"] {
+    margin-right: 3px;
+}
+
+.table-node-delete-button {
+  padding: 2px 6px;
+  font-size: 0.8em;
+  line-height: 1;
+  color: #dc3545; /* Red for delete */
+  border: 1px solid #dc3545;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.table-node-delete-button:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.table-node-add-button {
+  font-size: 0.9em;
+  width: 100%;
+  margin-top: 10px;
+  background-color: #28a745; /* Green for add */
+  border-color: #28a745;
+}
+.table-node-add-button:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+
+
+/* Landing Page Specific */
+.landing-page {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.landing-page h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.landing-page nav ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column; /* Stack links vertically */
+    align-items: center; /* Center align links */
+    gap: 15px; /* Space between links */
+    margin-top: 30px;
+}
+.landing-page nav li {
+    margin: 0;
+}
+
+.landing-page nav a {
+    display: block;
+    padding: 10px 20px;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    color: #007bff;
+    text-decoration: none;
+    min-width: 200px; /* Give links a minimum width */
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.landing-page nav a:hover {
+    background-color: #007bff;
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Styling for status/error messages */
+.error-message {
+  color: #dc3545; /* Red */
+  border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  color: #28a745; /* Green */
+  border: 1px solid #c3e6cb;
+  background-color: #d4edda;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.warning-message {
+  color: #ffc107; /* Yellow */
+  border: 1px solid #ffeeba;
+  background-color: #fff3cd;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+/* React Flow Customizations (Add as needed) */
+.react-flow__node {
+    /* Override default react-flow node styles if necessary */
+}
+.react-flow__controls {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.react-flow__minimap {
+     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.react-flow__background {
+    background-color: #e9ecef; /* Match page background or choose another */
 }

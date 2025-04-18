@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid
 import {
@@ -22,12 +22,15 @@ const nodeTypes = { tableNode: TableNode };
 
 // --- Landing Page Component ---
 function LandingPage() {
+  // Apply landing-page class
   return (
-    <div>
+    <div className="landing-page"> {/* Added className */}
       <h1>Welcome to the MySQL Visual UI</h1>
       <p>Select an option:</p>
+      {/* Use nav element structure as defined in CSS */}
       <nav>
         <ul>
+          {/* Use regular Links here if specific landing page styling is preferred */}
           <li><Link to="/canvas">Schema Design Canvas</Link></li>
           <li><Link to="/select">Data Selection</Link></li>
           <li><Link to="/crud">CRUD Operations</Link></li>
@@ -54,6 +57,7 @@ function SchemaCanvas() {
   const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
   const onConnect = useCallback((connection) => setEdges((eds) => addEdge({ ...connection, markerEnd: { type: MarkerType.ArrowClosed } }, eds)), [setEdges]);
 
+  // --- useEffect for loading initial data (remains the same) ---
   useEffect(() => {
     let isMounted = true;
     const loadInitialData = async () => {
@@ -62,12 +66,12 @@ function SchemaCanvas() {
         try {
             const schemaResponse = await axios.get('http://localhost:5000/api/current_schema');
             const currentSchema = schemaResponse.data;
-            console.log("[DEBUG] Fetched current schema:", currentSchema);
+            // console.log("[DEBUG] Fetched current schema:", currentSchema);
             if (!isMounted) return;
 
             const initialNodes = []; const initialEdges = [];
             const tablePositions = {}; let tableIndex = 0;
-            const nodeSpacingX = 300; const nodeSpacingY = 200; const nodesPerRow = 3;
+            const nodeSpacingX = 350; const nodeSpacingY = 250; const nodesPerRow = 3;
 
             for (const tableName in currentSchema.tables) {
                 const tableData = currentSchema.tables[tableName];
@@ -83,17 +87,17 @@ function SchemaCanvas() {
             }
             schemaNodeIdCounter = initialNodes.length + 1;
 
-            console.log("[DEBUG] Processing relationships:", currentSchema.relationships);
-            console.log("[DEBUG] Table name to node ID map:", tablePositions);
+            // console.log("[DEBUG] Processing relationships:", currentSchema.relationships);
+            // console.log("[DEBUG] Table name to node ID map:", tablePositions);
             for (const fk of currentSchema.relationships) {
                 const sourceNodeId = tablePositions[fk.source];
                 const targetNodeId = tablePositions[fk.target];
-                console.log(`[DEBUG] FK: ${fk.id}, Source Table: ${fk.source} -> Node ID: ${sourceNodeId}, Target Table: ${fk.target} -> Node ID: ${targetNodeId}`);
+                // console.log(`[DEBUG] FK: ${fk.id}, Source Table: ${fk.source} -> Node ID: ${sourceNodeId}, Target Table: ${fk.target} -> Node ID: ${targetNodeId}`);
                 if (sourceNodeId && targetNodeId) {
                     initialEdges.push({ id: fk.id, source: sourceNodeId, target: targetNodeId, markerEnd: { type: MarkerType.ArrowClosed } });
                 } else { console.warn(`[DEBUG] Could not find node ID for source (${fk.source}) or target (${fk.target}) for FK ${fk.id}`); }
             }
-            console.log("[DEBUG] Generated initialEdges:", initialEdges);
+            // console.log("[DEBUG] Generated initialEdges:", initialEdges);
 
             setNodes(initialNodes); setEdges(initialEdges); setLoadingSchema(false);
             setExistingTables(Object.keys(currentSchema.tables)); setLoadingTables(false);
@@ -101,7 +105,8 @@ function SchemaCanvas() {
             console.error("Error loading initial schema:", err);
             if (isMounted) {
                 const errorMsg = err.response?.data?.error || err.message || "Failed to load initial schema";
-                setSchemaError(errorMsg); setPaletteError(errorMsg);
+                setSchemaError(<div className="error-message">{errorMsg}</div>);
+                setPaletteError(<div className="error-message">{errorMsg}</div>);
                 setLoadingSchema(false); setLoadingTables(false);
             }
         }
@@ -110,10 +115,11 @@ function SchemaCanvas() {
     return () => { isMounted = false; };
   }, []);
 
+  // --- Callbacks addNode, addNodeFromExisting, sendSchema (remain the same) ---
   const addNode = useCallback(() => {
     const newId = `new-${schemaNodeIdCounter++}`;
     const newNode = {
-      id: newId, position: { x: Math.random() * 400 + 20, y: Math.random() * 400 + 20 },
+      id: newId, position: { x: Math.random() * 100 + 20, y: Math.random() * 100 + 20 }, // Adjust position for canvas
       data: { label: `NewTable_${newId.split('-')[1]}`, attributes: [{ name: 'id', type: 'INT', isPK: true, isNotNull: true, isUnique: true }] },
       type: 'tableNode',
     };
@@ -131,14 +137,15 @@ function SchemaCanvas() {
         }
         const newId = `existing-${schemaNodeIdCounter++}`;
         const newNode = {
-            id: newId, position: { x: Math.random() * 200 + 50, y: Math.random() * 200 + 50 },
+            id: newId, position: { x: Math.random() * 100 + 50, y: Math.random() * 100 + 50 }, // Adjust position for canvas
             data: { label: tableDetails.table_name, attributes: tableDetails.attributes },
             type: 'tableNode',
         };
         setNodes((nds) => nds.concat(newNode));
     } catch (error) {
         const errorMsg = `Failed to load details for ${tableName}: ${error.response?.data?.error || error.message}`;
-        setPaletteError(errorMsg); alert(errorMsg);
+        setPaletteError(<div className="error-message">{errorMsg}</div>);
+        alert(errorMsg);
     }
   }, [nodes, setNodes]);
 
@@ -147,7 +154,7 @@ function SchemaCanvas() {
       tables: nodes.map(node => ({ id: node.id, name: node.data.label, attributes: node.data.attributes || [] })),
       relationships: edges.map(edge => ({ id: edge.id, sourceTableId: edge.source, targetTableId: edge.target }))
     };
-    console.log("Sending schema data:", schemaData);
+    // console.log("Sending schema data:", schemaData);
     try {
       const response = await axios.post('http://localhost:5000/api/schema', schemaData);
       alert(`Schema data sent! Backend says: ${response.data.message}`);
@@ -160,41 +167,77 @@ function SchemaCanvas() {
     }
   }, [nodes, edges, setExistingTables]);
 
+
+  // --- Restructured Return Statement ---
   return (
-    <div>
-      <h2>Schema Design Canvas</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
-        <div style={{ flexGrow: 1, border: '1px solid #ccc', marginBottom: '10px', position: 'relative' }}>
-          {loadingSchema && <div style={{ padding: '20px' }}>Loading schema...</div>}
-          {schemaError && <div style={{ padding: '20px', color: 'red' }}>Error loading schema: {schemaError}</div>}
-          {!loadingSchema && !schemaError && (
-            <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} fitView defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}>
-              <Controls /> <Background /> <MiniMap />
-            </ReactFlow>
-          )}
-        </div>
-        <div style={{ flexShrink: 0, marginBottom: '10px' }}>
-           <button onClick={addNode} style={{ marginRight: '5px' }}>Add New Table Node</button>
-           <button onClick={sendSchema}>Apply Schema Changes to DB</button>
-        </div>
-        <div style={{ flexShrink: 0, borderTop: '1px solid #eee', paddingTop: '10px' }}>
-          <h4>Existing Tables (Click to Add to Canvas):</h4>
-          {loadingTables && <p>Loading existing tables...</p>}
-          {paletteError && <p style={{ color: 'red' }}>Error loading palette: {paletteError}</p>}
-          {!loadingTables && !paletteError && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-              {existingTables.length > 0 ? (
-                existingTables.map(tableName => (
-                  <button key={tableName} onClick={() => addNodeFromExisting(tableName)} style={{ padding: '3px 6px', fontSize: '0.9em', cursor: 'pointer', border: '1px solid #ccc', background: '#f0f0f0' }}>
-                    {tableName}
-                  </button>
-                ))
-              ) : ( <p>No existing tables found in database.</p> )}
+    // Use the component-layout structure
+    <div className="component-layout">
+        {/* Sidebar */}
+        <div className="sidebar">
+            {/* Section for Control Buttons */}
+            <div className="sidebar-section">
+                <h3>Controls</h3>
+                <button onClick={addNode} style={{ width: '100%', marginBottom: '10px' }}>
+                    Add New Table Node
+                </button>
+                <button onClick={sendSchema} style={{ width: '100%' }}>
+                    Apply Schema Changes to DB
+                </button>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+
+             {/* Section for Existing Tables Palette */}
+            <div className="sidebar-section existing-tables-palette" style={{ flexGrow: 1, overflowY: 'auto' }}> {/* Allow palette to grow and scroll */}
+                <h4>Existing Tables (Click to Add)</h4>
+                {loadingTables && <p>Loading existing tables...</p>}
+                {paletteError && <div>{paletteError}</div>}
+                {!loadingTables && !paletteError && (
+                    <div className="existing-tables-list">
+                        {existingTables.length > 0 ? (
+                        existingTables.map(tableName => (
+                            <button
+                                key={tableName}
+                                onClick={() => addNodeFromExisting(tableName)}
+                                className="existing-table-button"
+                                >
+                            {tableName}
+                            </button>
+                        ))
+                        ) : (
+                        <p className="no-existing-tables-message">
+                            No existing tables found.
+                        </p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div> {/* End Sidebar */}
+
+        {/* Main Content Area - Canvas */}
+        <div className="main-content" style={{ padding: 0, border: 'none' }}> {/* Remove padding/border if canvas handles it */}
+            {/* Set height for the React Flow container */}
+            <div style={{ height: '100%', width: '100%', position: 'relative' }}>
+                {loadingSchema && <div style={{ padding: '20px' }}>Loading schema...</div>}
+                {schemaError && <div style={{ padding: '20px' }}>{schemaError}</div>}
+                {!loadingSchema && !schemaError && (
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        nodeTypes={nodeTypes}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        fitView
+                        defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
+                        style={{ background: '#f0f0f0' }} // Example background for canvas area
+                        >
+                        <Controls />
+                        <Background />
+                        <MiniMap />
+                    </ReactFlow>
+                )}
+            </div>
+        </div> {/* End Main Content */}
+    </div> // End component-layout
   );
 }
 // --- End Schema Canvas Component ---
@@ -579,37 +622,39 @@ const runQuery = useCallback(async () => {
   const isAnyTableLoading = Object.values(selectedTables).some(details => details?.attributes === 'fetching');
 
   return (
-      <div style={{ display: 'flex', height: 'calc(100vh - 100px)' }}> {/* Adjust height */}
+      <div className='component-layout'> {/* Adjust height */}
           {/* Sidebar */}
-          <div style={{ width: '350px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-              <h3>Tables</h3>
-              {loading && <p>Loading tables...</p>}
-              {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-              {!loading && !error && (
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '15px' }}>
-                      {allTables.length > 0 ? (
-                          allTables.map(tableName => (
-                              <li key={tableName} style={{ marginBottom: '5px' }}>
-                                  <label title={`Click to ${selectedTables[tableName] ? 'deselect' : 'select'} ${tableName}`}>
-                                      <input
-                                          type="checkbox"
-                                          checked={!!selectedTables[tableName]}
-                                          onChange={() => toggleTableSelection(tableName)}
-                                          style={{ marginRight: '5px' }}
-                                           disabled={selectedTables[tableName]?.attributes === 'fetching'} // Disable while fetching
-                                      />
-                                      {tableName}
-                                       {selectedTables[tableName]?.attributes === 'fetching' && <em style={{fontSize: '0.8em', color: '#888'}}> (loading...)</em>}
-                                  </label>
-                              </li>
-                          ))
-                      ) : ( <p>No tables found.</p> )}
-                  </ul>
-              )}
+          <div className='sidebar'>
+                <div className="sidebar-section"> {/* Added section wrapper */}
+                    <h3>Tables</h3>
+                    {loading && <p>Loading tables...</p>}
+                    {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+                    {!loading && !error && (
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '15px' }}>
+                            {allTables.length > 0 ? (
+                                allTables.map(tableName => (
+                                    <li key={tableName} style={{ marginBottom: '5px' }}>
+                                        <label title={`Click to ${selectedTables[tableName] ? 'deselect' : 'select'} ${tableName}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!selectedTables[tableName]}
+                                                onChange={() => toggleTableSelection(tableName)}
+                                                style={{ marginRight: '5px' }}
+                                                disabled={selectedTables[tableName]?.attributes === 'fetching'} // Disable while fetching
+                                            />
+                                            {tableName}
+                                            {selectedTables[tableName]?.attributes === 'fetching' && <em style={{fontSize: '0.8em', color: '#888'}}> (loading...)</em>}
+                                        </label>
+                                    </li>
+                                ))
+                            ) : ( <p>No tables found.</p> )}
+                        </ul>
+                    )}
+                </div>
 
               {/* Joins Section */}
               {selectedTableNames.length >= 2 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginBottom: '15px' }}>
+                  <div className="sidebar-section">
                       <h4>Joins</h4>
                       {joins.map((join, index) => (
                           <div key={join.id} style={{ border: '1px solid #ddd', padding: '5px', marginBottom: '5px', fontSize: '0.9em' }}>
@@ -646,7 +691,7 @@ const runQuery = useCallback(async () => {
 
               {/* Columns / Filters Section */}
               {selectedTableNames.length >= 1 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginBottom: '15px' }}>
+                  <div className='sidebar-section'>
                       <h4>Columns & Filters</h4>
                       {selectedTableNames.map(tableName => (
                           <div key={tableName} style={{ marginBottom: '10px' }}>
@@ -675,7 +720,7 @@ const runQuery = useCallback(async () => {
                           </div>
                       ))}
                        {/* WHERE Clauses */}
-                      <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginTop:'10px' }}>
+                      <div className='sidebar-section'>
                           <h5>Filters (WHERE)</h5>
                            {whereClauses.map((clause, index) => ( // Get index
                               <React.Fragment key={clause.id}>
@@ -722,7 +767,7 @@ const runQuery = useCallback(async () => {
 
               {/* Aggregates Section */}
               {selectedTableNames.length >= 1 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginBottom: '15px' }}>
+                  <div className='sidebar-section'>
                       <h4>Aggregates</h4>
                        {aggregates.map((agg) => (
                           <div key={agg.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em' }}>
@@ -757,7 +802,7 @@ const runQuery = useCallback(async () => {
 
               {/* Group By Section */}
               {aggregates.length > 0 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginBottom: '15px' }}>
+                  <div className='sidebar-section'>
                       <h4>Group By</h4>
                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                            {getGroupableColumns().map(col => (
@@ -780,21 +825,14 @@ const runQuery = useCallback(async () => {
 
               {/* Inform user if joins are required */}
               {requiresJoin &&
-                     <p style={{color: 'orange', fontSize: '0.9em', textAlign: 'center', border: '1px solid orange', padding: '3px', margin:'5px 0'}}>
+                     <p className='warning-message'>
                          Please define JOIN conditions for multiple tables.
                      </p>
                  }
 
               {/* Query Button */}
               {/* Sticky container for the query button */}
-                <div style={{
-                    position: 'sticky',          // Make the container stick
-                    bottom: 0,                 // Stick it to the bottom of the scrolling parent
-                    background: 'white',       // Add a background color
-                    padding: '15px 10px 10px 10px', // Adjust padding (Top, Right, Bottom, Left)
-                    borderTop: '1px solid #eee', // Keep the visual separator
-                    marginTop: '10px',           // Add space above when content is short
-                 }}>
+                <div className='sidebar-sticky-bottom'>
                     <button
                         onClick={runQuery}
                         style={{ width: '100%', padding: '12px 0' }} // Adjusted height
@@ -812,10 +850,10 @@ const runQuery = useCallback(async () => {
             </div>
 
           {/* Main Content Area - Results */}
-          <div style={{ flexGrow: 1, padding: '10px', overflow: 'auto' }}>
+          <div className='main-content'>
               <h2>Query Results</h2>
               {isQuerying && <p>Executing query...</p>}
-              {queryError && <p style={{ color: 'red' }}>Query Error: {queryError}</p>}
+              {queryError && <p className='error-message'>Query Error: {queryError}</p>}
               {queryResults ? (
                   queryResults.rows && queryResults.rows.length > 0 ? (
                    <table border="1" style={{ borderCollapse: 'collapse', width: '100%', marginTop: '15px' }}>
@@ -1280,18 +1318,18 @@ function CrudOperations() {
   const validWhereClausesEntered = dmlWhereClauses.filter(w=>w.column && w.operator).length > 0;
 
   return (
-       <div style={{ display: 'flex', height: 'calc(100vh - 100px)' }}>
+       <div className='component-layout'>
           {/* Sidebar */}
-          <div style={{ width: '350px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div className='sidebar'>
                <h3>DML Operations</h3>
                {/* Operation Selection */}
-               <div style={{ marginBottom: '15px' }}>
+               <div className='sidebar-section'>
                    <label style={{ marginRight: '10px' }}><input type="radio" value="INSERT" checked={crudOperation === 'INSERT'} onChange={handleOperationChange} /> Insert</label>
                    <label style={{ marginRight: '10px' }}><input type="radio" value="UPDATE" checked={crudOperation === 'UPDATE'} onChange={handleOperationChange} /> Update</label>
                    <label><input type="radio" value="DELETE" checked={crudOperation === 'DELETE'} onChange={handleOperationChange} /> Delete</label>
                </div>
                {/* Table Selection */}
-               <div style={{ marginBottom: '15px' }}>
+               <div className='sidebar-section'>
                    <label htmlFor="crudTableSelect" style={{ display: 'block', marginBottom: '5px' }}>Table:</label>
                    <select id="crudTableSelect" value={selectedTable} onChange={(e) => setSelectedTable(e.target.value)} disabled={isLoadingTables} style={{ width: '100%', padding: '5px' }}>
                        <option value="">-- Select Table --</option>
@@ -1304,7 +1342,7 @@ function CrudOperations() {
                   {renderFormFields()}
                </div>
                {/* Sticky Buttons Container */}
-               <div style={{ position: 'sticky', bottom: 0, background: 'white', padding: '15px 10px 10px 10px', borderTop: '1px solid #eee', marginTop: '10px' }}>
+               <div className='sidebar-sticky-bottom'>
                    {/* Show Table Button */}
                    <button onClick={showTableData} style={{ width: '100%', padding: '12px 0', marginBottom: '10px' }} disabled={!selectedTable || isShowingTable || isExecuting}>
                        {isShowingTable ? 'Loading Table...' : 'Show Table Data'}
@@ -1325,10 +1363,10 @@ function CrudOperations() {
                </div>
           </div>
            {/* Main Content Area */}
-           <div style={{ flexGrow: 1, padding: '10px', overflow: 'auto' }}>
+           <div className='main-content'>
                <h2>{selectedTable ? `${selectedTable} - ${crudOperation}` : 'CRUD Operations'}</h2>
-               {error && <p style={{ color: 'red', border:'1px solid red', padding:'10px' }}>Error: {error}</p>}
-               {successMessage && <p style={{ color: 'green', border:'1px solid green', padding:'10px' }}>Success: {successMessage}</p>}
+               {error && <p className='error-message'>Error: {error}</p>}
+               {successMessage && <p className='success-message'>Success: {successMessage}</p>}
 
                {/* Corrected conditional rendering for table display */}
                {tableDisplayData ? (
@@ -1498,13 +1536,13 @@ function NormalizationAnalyzer() {
   const availableDependents = tableColumns.filter(col => !currentDeterminants.has(col.name));
 
   return (
-      <div style={{ display: 'flex', height: 'calc(100vh - 100px)' }}>
+      <div className='component-layout'>
           {/* Sidebar */}
-          <div style={{ width: '400px', borderRight: '1px solid #ccc', padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div className='sidebar'>
               <h3>Normalization Analysis</h3>
 
               {/* Table Selection */}
-              <div style={{ marginBottom: '15px' }}>
+              <div className='sidebar-section'>
                   <label htmlFor="normTableSelect" style={{ display: 'block', marginBottom: '5px' }}>Table:</label>
                   <select
                       id="normTableSelect"
@@ -1523,7 +1561,7 @@ function NormalizationAnalyzer() {
 
                {/* Columns & PK Display */}
                {selectedTable && !isLoadingColumns && tableColumns.length > 0 && (
-                  <div style={{ marginBottom: '15px', fontSize: '0.9em', background:'#f8f8f8', padding:'8px', border:'1px solid #eee' }}>
+                  <div className='sidebar-section'>
                        <strong>Columns:</strong> {tableColumns.map(c => c.name).join(', ')}<br/>
                        <strong>Primary Key:</strong> {primaryKeyColumns.length > 0 ? `{${primaryKeyColumns.join(', ')}}` : 'None Defined!'}
                        {!primaryKeyColumns.length && <span style={{color:'red'}}> (Warning: PK needed for analysis)</span>}
@@ -1534,7 +1572,7 @@ function NormalizationAnalyzer() {
 
                {/* FD Input Section */}
                {selectedTable && !isLoadingColumns && tableColumns.length > 0 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', marginBottom: '15px', flexGrow: 1 }}>
+                  <div className='sidebar-section'>
                       <h4>Define Functional Dependencies (FDs)</h4>
                       <p style={{fontSize:'0.8em', color:'#666', margin:'0 0 10px 0'}}>
                           {'Hint: An FD means knowing values in \'Determinant(s)\' column(s) uniquely tells you the value in the \'Dependent\' column.'} <br/>
@@ -1605,7 +1643,7 @@ function NormalizationAnalyzer() {
 
 
               {/* Sticky Analyze Button */}
-               <div style={{ position: 'sticky', bottom: 0, background: 'white', padding: '15px 10px 10px 10px', borderTop: '1px solid #eee', marginTop: '10px' }}>
+               <div className='sidebar-sticky-bottom'>
                   <button
                       onClick={handleAnalyze}
                       style={{ width: '100%', padding: '12px 0' }}
@@ -1619,11 +1657,11 @@ function NormalizationAnalyzer() {
           </div>
 
            {/* Main Content Area - Analysis Results */}
-          <div style={{ flexGrow: 1, padding: '10px', overflow: 'auto' }}>
+          <div className='main-content'>
               <h2>Normalization Results {analysisResult?.tableName && `for ${analysisResult.tableName}`}</h2>
 
               {isLoadingAnalysis && <p>Analyzing...</p>}
-              {error && <p style={{ color: 'red', border:'1px solid red', padding:'10px' }}>Error: {error}</p>}
+              {error && <p className='error-message'>Error: {error}</p>}
 
               {analysisResult && !error && (
                   <div>
@@ -1683,27 +1721,31 @@ function NormalizationAnalyzer() {
 
 
 // --- Main App Component ---
+// --- Main App Component ---
 function App() {
   return (
     <Router>
-      <div className="App">
-        <nav>
+      <div className="App"> {/* Added className */}
+        <nav className="app-nav"> {/* Added className */}
           <ul>
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/canvas">Canvas</Link></li>
-            <li><Link to="/select">Select</Link></li>
-            <li><Link to="/crud">CRUD</Link></li>
-            <li><Link to="/normalization">Normalization</Link></li>
+            {/* Use NavLink for active styling */}
+            <li><NavLink to="/">Home</NavLink></li>
+            <li><NavLink to="/canvas">Canvas</NavLink></li>
+            <li><NavLink to="/select">Select</NavLink></li>
+            <li><NavLink to="/crud">CRUD</NavLink></li>
+            <li><NavLink to="/normalization">Normalization</NavLink></li>
           </ul>
         </nav>
-        <hr />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/canvas" element={<SchemaCanvas />} />
-          <Route path="/select" element={<DataSelection />} />
-          <Route path="/crud" element={<CrudOperations />} />
-          <Route path="/normalization" element={<NormalizationAnalyzer   />} />
-        </Routes>
+        {/* Removed <hr /> */}
+        <div className="app-content"> {/* Added className */}
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/canvas" element={<SchemaCanvas />} />
+            <Route path="/select" element={<DataSelection />} />
+            <Route path="/crud" element={<CrudOperations />} />
+            <Route path="/normalization" element={<NormalizationAnalyzer />} />
+          </Routes>
+        </div>
       </div>
     </Router>
   );

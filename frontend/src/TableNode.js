@@ -1,32 +1,6 @@
 import React, { useCallback, memo } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 
-// Basic styling (can be moved to CSS)
-const nodeStyle = {
-  border: '1px solid #777',
-  padding: '10px',
-  borderRadius: '5px',
-  background: 'white',
-  minWidth: '200px',
-};
-
-const inputStyle = {
-  width: '95%',
-  marginBottom: '5px',
-};
-
-const attributeRowStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: '4px',
-  fontSize: '0.9em',
-};
-
-const constraintLabelStyle = {
-    fontSize: '0.8em',
-    margin: '0 2px',
-};
 
 const TableNode = ({ data, id }) => {
   const { setNodes } = useReactFlow();
@@ -98,38 +72,42 @@ const TableNode = ({ data, id }) => {
 
 
   return (
-    <div style={nodeStyle}>
-      {/* Handles */}
+    // Apply the main node class
+    <div className="table-node">
+      {/* Handles (remain the same) */}
       <Handle type="target" position={Position.Left} id={`target-${id}`} />
       <Handle type="source" position={Position.Right} id={`source-${id}`} />
 
       {/* Table Name */}
-      <input
-        type="text"
-        value={tableName}
-        onChange={onTableNameChange}
-        style={inputStyle}
-        placeholder="Table Name"
-      />
-      <hr style={{ margin: '5px 0' }} />
+      <div className="table-node-header"> {/* Optional wrapper for header styling */}
+        <input
+          type="text"
+          value={tableName}
+          onChange={onTableNameChange}
+          // Removed inline style, relies on .table-node input styles
+          placeholder="Table Name"
+        />
+      </div>
+      {/* Removed <hr />, styling handled by classes */}
 
       {/* Attributes */}
-      <div style={{ marginBottom: '5px', fontSize: '0.8em', fontWeight: 'bold' }}>Attributes:</div>
+      <div className="table-node-attributes-title">Attributes:</div>
       {attributes.map((attr, index) => (
-        <div key={index} style={attributeRowStyle}>
+        // Apply attribute row class
+        <div key={index} className="table-node-attribute-row">
           {/* Name */}
           <input
             type="text"
             value={attr.name || ''}
             onChange={(e) => onAttributeChange(index, 'name', e.target.value)}
             placeholder="col name"
-            style={{ width: '30%', marginRight: '3px' }}
+            // Removed inline style, relies on .table-node-attribute-row input styles
           />
           {/* Type */}
           <select
-             value={attr.type || 'VARCHAR(255)'}
+             value={attr.type || 'VARCHAR(255)'} // Ensure a default value
              onChange={(e) => onAttributeChange(index, 'type', e.target.value)}
-             style={{ width: '30%', marginRight: '3px' }}
+             // Removed inline style
           >
             <option value="INT">INT</option>
             <option value="VARCHAR(255)">VARCHAR(255)</option>
@@ -137,30 +115,36 @@ const TableNode = ({ data, id }) => {
             <option value="DATE">DATE</option>
             <option value="BOOLEAN">BOOLEAN</option>
             <option value="DECIMAL(10,2)">DECIMAL(10,2)</option>
-            {/* Add more types */}
+            <option value="TIMESTAMP">TIMESTAMP</option>
+            <option value="FLOAT">FLOAT</option>
+            {/* Add more relevant MySQL types */}
           </select>
           {/* Constraints */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-             <label style={constraintLabelStyle}>
+          {/* Apply constraints container class */}
+          <div className="table-node-constraints">
+             {/* Removed inline label style */}
+             <label title="Primary Key">
                 PK:
                 <input type="checkbox" checked={attr.isPK || false} onChange={(e) => onAttributeChange(index, 'isPK', e.target.checked)} />
              </label>
-             <label style={constraintLabelStyle}>
+             <label title="Not Null">
                 NN:
-                <input type="checkbox" checked={attr.isNotNull || false} onChange={(e) => onAttributeChange(index, 'isNotNull', e.target.checked)} />
+                <input type="checkbox" checked={attr.isNotNull || false} onChange={(e) => onAttributeChange(index, 'isNotNull', e.target.checked)} disabled={attr.isPK} /* NN is implied by PK */ />
              </label>
-             <label style={constraintLabelStyle}>
+             <label title="Unique">
                 UQ:
-                <input type="checkbox" checked={attr.isUnique || false} onChange={(e) => onAttributeChange(index, 'isUnique', e.target.checked)} />
+                <input type="checkbox" checked={attr.isUnique || false} onChange={(e) => onAttributeChange(index, 'isUnique', e.target.checked)} disabled={attr.isPK} /* Unique is implied by PK */ />
              </label>
           </div>
           {/* Delete Button */}
-          <button onClick={() => deleteAttribute(index)} style={{ padding: '1px 4px', fontSize: '0.8em', lineHeight: '1', marginLeft: '3px', color: 'red', border: '1px solid red', background: 'none', cursor: 'pointer' }}>
+          {/* Apply delete button class */}
+          <button onClick={() => deleteAttribute(index)} className="table-node-delete-button" title="Delete Attribute">
             X
           </button>
         </div>
       ))}
-      <button onClick={addAttribute} style={{ fontSize: '0.8em', width: '100%', marginTop: '5px' }}>
+      {/* Apply add button class */}
+      <button onClick={addAttribute} className="table-node-add-button">
         + Add Attribute
       </button>
     </div>
