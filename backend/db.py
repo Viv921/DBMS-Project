@@ -1,12 +1,14 @@
 import os
 import mysql.connector
+from dotenv import load_dotenv
 from mysql.connector import Error
 
-# Use environment variables directly (Docker Compose will pass these in)
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-DB_NAME = os.getenv('DB_NAME', 'mydatabase')
+load_dotenv()
+
+DB_HOST = os.getenv('MYSQL_HOST', 'localhost')
+DB_USER = os.getenv('MYSQL_USER', 'root')
+DB_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
+DB_NAME = os.getenv('MYSQL_DB', 'mydatabase')
 
 def get_db_connection():
     """Establishes a connection to the MySQL database."""

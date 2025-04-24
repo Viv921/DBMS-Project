@@ -1,4 +1,4 @@
-./backend/.env
-./frontend/node_modules
-./.vscode
-./backend/__pycache__
+/backend/.env
+/frontend/node_modules
+/.vscode
+/backend/__pycache__
