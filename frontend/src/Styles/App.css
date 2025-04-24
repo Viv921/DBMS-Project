@@ -347,3 +347,129 @@
 .react-flow__background {
     background-color: #e9ecef; /* Match page background or choose another */
 }
+
+/* Add new styles for the theme toggle in the navigation bar */
+.theme-toggle-container {
+  margin-left: auto; /* Push to right side */
+  margin-right: 0;
+}
+
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--nav-text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark mode adjustments for components */
+[data-theme='dark'] .app-content {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .sidebar {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .main-content {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .table-node {
+  background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3), -3px -3px 5px rgba(75, 75, 75, 0.1);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .existing-tables-palette {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .app-nav {
+  background-color: var(--nav-bg);
+}
+
+/* Fix for dark mode select dropdown arrow */
+[data-theme='dark'] select {
+  background: var(--bg-secondary) url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"%3E%3Cpath fill="%23f8f9fa" d="M2 0L0 2h4zm0 5L0 3h4z"/%3E%3C/svg%3E') no-repeat right .75rem center/8px 10px;
+}
+
+/* Dark mode adjustments for disabled buttons */
+[data-theme='dark'] button:disabled {
+  background-color: #4a4a4a; /* Lighter gray than dark background */
+  border-color: #5a5a5a;
+  color: #a0a0a0; /* Light gray text */
+  opacity: 0.8;
+}
+
+/* Specific style for the Analyze Normalization button when disabled */
+[data-theme='dark'] .sidebar-sticky-bottom button:disabled {
+  background-color: #4a4a4a;
+  border-color: #5a5a5a;
+  color: #a0a0a0;
+}
+
+/* Update the sidebar-sticky-bottom style for dark mode */
+[data-theme='dark'] .sidebar-sticky-bottom {
+  background-color: #343a40; /* Match dark theme secondary background */
+  border-top: 1px solid #495057; /* Match dark theme border color */
+}
+
+/* Fix the disabled buttons to prevent the white border/background */
+[data-theme='dark'] .sidebar-sticky-bottom button {
+  width: 100%; /* Ensure full width */
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-bg);
+}
+
+/* Style for disabled buttons in dark mode */
+[data-theme='dark'] .sidebar-sticky-bottom button:disabled {
+  background-color: #4a5056 !important;
+  border-color: #575f67 !important;
+  color: #adb5bd !important;
+  width: 100%; /* Ensure full width */
+}
+
+/* Fix for the "Show Table Data" and similar buttons with specific styles */
+[data-theme='dark'] .sidebar-sticky-bottom button[style*="background"] {
+  border: 1px solid transparent;
+}
+
+/* Fix for disabled buttons with specific background colors */
+[data-theme='dark'] .sidebar-sticky-bottom button[style*="background"]:disabled {
+  background-color: #4a5056 !important;
+  border-color: #575f67 !important;
+  color: #adb5bd !important;
+}
+
+/* Ensure the green execute button maintains its color when enabled */
+[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(0, 230, 0)"] {
+  background-color: #00e600 !important;
+  border-color: #00e600 !important;
+}
+
+/* Ensure the yellow update button maintains its color when enabled */
+[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(230, 230, 0)"] {
+  background-color: #e6e600 !important;
+  border-color: #e6e600 !important;
+}
+
+/* Ensure the red delete button maintains its color when enabled */
+[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(230, 0, 0)"] {
+  background-color: #e60000 !important;
+  border-color: #e60000 !important;
+}
