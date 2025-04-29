@@ -206,10 +206,16 @@ function SchemaCanvas() {
                         onConnect={onConnect}
                         fitView
                         defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
-                        style={{ background: '#f0f0f0' }} // Example background for canvas area
+                        style={{ background: 'var(--bg-primary)' }}
                         >
                         <Controls />
-                        <Background />
+                        <Background 
+                            variant="dots"
+                            gap={20}
+                            size={1}
+                            color="var(--border-color)"
+                            style={{ backgroundColor: 'var(--bg-primary)' }}
+                        />
                         <MiniMap />
                     </ReactFlow>
                 )}

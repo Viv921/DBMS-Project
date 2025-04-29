@@ -5,13 +5,21 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  padding-top: 50px; /* Add padding to the top of the app body to prevent content from hiding behind the fixed navbar. Adjust the value based on the actual navbar height */
 }
 
 /* Navigation */
 .app-nav {
-  background-color: #343a40; /* Dark background for nav */
+  /* background-color: #343a40; */ /* Dark background for nav */
+  background-color: rgba(52, 58, 64, 0.8); /* Dark translucent background (80% opacity) */
   padding: 10px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: fixed; /* Make navbar fixed at the top */
+  top: 0;
+  left: 0;
+  width: 100%; /* Ensure it spans the full width */
+  z-index: 1000; /* Keep navbar above other content */
+  box-sizing: border-box; /* Include padding in the element's total width and height */
 }
 
 .app-nav ul {
@@ -46,10 +54,17 @@
 .app-content {
   flex-grow: 1; /* Allows content to fill remaining space */
   padding: 20px;
-  background-color: #ffffff; /* White background for content area */
+  /* background-color: #ffffff; */ /* Remove the fixed background color if you want the content below the navbar to be visible */
   margin: 20px; /* Add some margin around the content */
   border-radius: 5px;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  /* Ensure content starts below the fixed navbar */
+  /* The padding-top on .App should handle this, but keeping margin-top as fallback or alternative */
+  /* margin-top: 70px; Adjust based on navbar height + desired spacing */
+  /* Consider removing padding/margin if the landing page hero should be full-width */
+  /* padding: 0; */
+  /* margin: 0; */
+  /* box-shadow: none; */ /* Maybe remove shadow for hero container */
 }
 
 /* Specific Component Layouts */
@@ -374,7 +389,9 @@
 
 /* Dark mode adjustments for components */
 [data-theme='dark'] .app-content {
-  background-color: var(--bg-secondary);
+  background-color: #2c2c2c; /* Darker background for content */
+  color: #e0e0e0; /* Light text */
+  /* No change needed for translucency itself, but ensure contrast is good */
   border: 1px solid var(--border-color);
 }
 
@@ -400,7 +417,10 @@
 }
 
 [data-theme='dark'] .app-nav {
-  background-color: var(--nav-bg);
+  /* background-color: #212529; */ /* Even darker for dark mode */
+  background-color: rgba(33, 37, 41, 0.85); /* Darker translucent for dark mode (85% opacity) */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Adjust shadow for dark mode */
+  /* Position, width, z-index are already set */
 }
 
 /* Fix for dark mode select dropdown arrow */
@@ -473,3 +493,341 @@
   background-color: #e60000 !important;
   border-color: #e60000 !important;
 }
+
+/* ReactFlow Dark Mode Overrides */
+[data-theme='dark'] .react-flow {
+  background-color: var(--bg-primary);
+}
+
+[data-theme='dark'] .react-flow__container {
+  background-color: var(--bg-primary);
+}
+
+[data-theme='dark'] .react-flow__background {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme='dark'] .react-flow__background-pattern {
+  opacity: 0.4;
+}
+
+[data-theme='dark'] .react-flow__background .react-flow__background-pattern circle {
+  fill: var(--text-secondary);
+}
+
+[data-theme='dark'] .react-flow__minimap {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme='dark'] .react-flow__controls {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .react-flow__controls-button {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  fill: var(--text-primary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .react-flow__controls-button:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme='dark'] .react-flow__controls-button svg {
+  fill: var(--text-primary);
+}
+
+[data-theme='dark'] .react-flow__panel {
+  background: var(--bg-secondary);
+}
+
+[data-theme='dark'] .react-flow__attribution {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .react-flow__minimap-mask {
+  fill: var(--bg-tertiary);
+}
+
+[data-theme='dark'] .react-flow__minimap-node {
+  fill: var(--text-primary);
+  stroke: var(--border-color);
+}
+
+/* Landing Page Specific Styles */
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center content horizontally */
+  justify-content: center; /* Center content vertically */
+  min-height: calc(80vh - 50px); /* Example height, adjust as needed (subtract navbar height if fixed) */
+  text-align: center;
+  padding: 40px 20px;
+  /* background-color: #0b131a; */ /* Example dark background like Atlas */
+  /* color: #ffffff; */ /* Light text on dark background */
+  background-color: var(--bg-secondary); /* Use theme variable */
+  color: var(--text-primary); /* Use theme variable */
+}
+
+.hero-title {
+  font-size: 3.5rem; /* Large title */
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-heading); /* Use theme variable */
+}
+
+.hero-caption {
+  font-size: 1.25rem;
+  max-width: 600px; /* Limit caption width */
+  margin-bottom: 2rem;
+  color: var(--text-secondary); /* Use theme variable */
+}
+
+.hero-button {
+  /* Use existing button styles or create specific ones */
+  padding: 0.8rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  background-color: #1abc9c; /* Example green color */
+  border-color: #1abc9c;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.hero-button:hover {
+  background-color: #16a085; /* Darker green on hover */
+  border-color: #16a085;
+}
+
+.main-content-section {
+  padding: 60px 20px; /* Increased padding */
+  min-height: 50vh;
+  background-color: var(--bg-primary);
+  text-align: center; /* Center the heading */
+}
+
+.main-content-section h2 {
+    margin-bottom: 2.5rem; /* More space below heading */
+    font-size: 2rem;
+}
+
+/* Remove old landing page nav styles if they exist */
+.landing-page-nav {
+    display: none; /* Or just delete the rules */
+}
+/* .landing-page-nav ul { ... } */
+/* .landing-page-nav li { ... } */
+/* .landing-page-nav a { ... } */
+
+
+/* Features Grid Layout */
+.features-grid {
+  display: grid;
+  /* grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); */ /* Replaced this */
+  grid-template-columns: repeat(2, 1fr); /* Default to 2 columns, filling the width */
+  gap: 30px; /* Space between cards */
+  max-width: 1000px; /* Limit overall width */
+  margin: 0 auto; /* Center the grid */
+  padding: 20px 0;
+}
+
+/* Individual Feature Card Styling */
+.feature-card {
+  background-color: var(--bg-secondary); /* Use theme variable */
+  border: 1px solid var(--border-color); /* Subtle border */
+  border-radius: 12px; /* Rounded corners */
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+}
+
+.feature-card:hover {
+  transform: translateY(-5px); /* Lift effect on hover */
+  box-shadow: 0 8px 16px var(--box-shadow); /* Stronger shadow on hover */
+}
+
+.feature-icon {
+  font-size: 2.5rem; /* Adjust size as needed */
+  margin-bottom: 1rem;
+  /* Add styling for actual icons here (e.g., color, dimensions) */
+  color: var(--text-secondary); /* Placeholder color */
+}
+
+.feature-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-heading);
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Dark Theme Adjustments for Cards */
+[data-theme='dark'] .feature-card {
+    background-color: #2c2c2c; /* Darker card background */
+    border-color: #444; /* Darker border */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .feature-card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .feature-icon {
+    color: #aaa; /* Lighter grey for icon placeholder */
+}
+
+/* Add a media query for smaller screens */
+@media (max-width: 600px) { /* Adjust breakpoint as needed */
+  .features-grid {
+    grid-template-columns: repeat(1, 1fr); /* Stack to 1 column */
+    gap: 20px; /* Adjust gap for smaller screens */
+  }
+
+  .feature-card {
+      padding: 20px 15px; /* Adjust padding for smaller cards */
+  }
+
+  .feature-card h3 {
+      font-size: 1.2rem; /* Adjust font size */
+  }
+}
+
+/* --- Team Section --- */
+.team-section {
+  padding: 60px 20px;
+  background-color: var(--bg-primary); /* Or a different background if desired */
+  text-align: center;
+}
+
+.section-title { /* General style for section titles */
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-heading);
+  text-transform: uppercase; /* Match "OUR TEAM" style */
+  letter-spacing: 1px;
+}
+
+.section-subtitle { /* General style for section subtitles */
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin: 0 auto 3rem auto; /* Center and add space below */
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.team-grid {
+  display: grid;
+  /* grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); */ /* Replaced this */
+  grid-template-columns: repeat(5, 1fr); /* Explicitly set 5 equal-width columns */
+  gap: 20px; /* Adjust gap as needed, maybe smaller for 5 items */
+  max-width: 1200px; /* Keep or adjust max-width */
+  margin: 0 auto; /* Center the grid */
+}
+
+.team-member-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-member-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px var(--box-shadow);
+}
+
+.team-member-photo-container {
+  width: 120px; /* Size of the photo circle */
+  height: 120px;
+  border-radius: 50%; /* Make it circular */
+  margin: 0 auto 20px auto; /* Center and space below */
+  overflow: hidden; /* Clip image to circle */
+  background-color: var(--bg-tertiary); /* Placeholder background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-member-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Scale image nicely */
+}
+
+.team-member-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--text-heading);
+}
+
+.team-member-role {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-transform: uppercase; /* Match style in image */
+  letter-spacing: 0.5px;
+}
+
+.team-member-description {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.team-member-social {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.team-member-social a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.2rem; /* Adjust icon size */
+  transition: color 0.2s ease;
+}
+
+.team-member-social a:hover {
+  color: var(--link-hover-color);
+}
+
+/* Dark Theme Adjustments */
+[data-theme='dark'] .team-member-card {
+    background-color: #2c2c2c;
+    border-color: #444;
+}
+
+[data-theme='dark'] .team-member-photo-container {
+    background-color: #495057;
+}
+
+
+/* Remove or comment out media queries that change team-grid columns if you always want 5 */
+/* @media (max-width: 500px) { */
+  /* .team-grid { */
+     /* grid-template-columns: 1fr; */ /* Remove this if single row is always desired */
+     /* gap: 20px; */
+  /* } */
+  /* .team-member-card { */
+      /* padding: 20px; */
+  /* } */
+/* } */
