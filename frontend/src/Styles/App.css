@@ -12,7 +12,7 @@
 .app-nav {
   /* background-color: #343a40; */ /* Dark background for nav */
   background-color: rgba(52, 58, 64, 0.8); /* Dark translucent background (80% opacity) */
-  padding: 10px 20px;
+  padding: 18px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: fixed; /* Make navbar fixed at the top */
   top: 0;
@@ -39,7 +39,7 @@
   color: #f8f9fa; /* Light text for links */
   text-decoration: none;
   font-weight: 500;
-  font-size: 1rem; /* Explicitly set base font size */
+  font-size: 1.2rem; /* Explicitly set base font size */
   padding: 8px 15px; /* Keep padding */
   border-radius: 4px; /* Keep rounding */
   transition: color 0.2s ease, font-size 0.2s ease; /* Update transition */
@@ -47,13 +47,13 @@
 
 .app-nav a:hover {
   color: #000000; /* Black text on hover */
-  font-size: 1.4em; /* Slightly larger font on hover */
+  font-size: 1.6em; /* Slightly larger font on hover */
   /* background-color: transparent; Ensure no background change */
 }
 
 .app-nav a.active {
   color: #50acfd; /* Black text when active */
-  font-size: 1rem;  /* Keep default font size when active */
+  font-size: 1.2rem;  /* Keep default font size when active */
   /* background-color: transparent; Ensure no background change */
 }
 
