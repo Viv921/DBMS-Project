@@ -39,15 +39,22 @@
   color: #f8f9fa; /* Light text for links */
   text-decoration: none;
   font-weight: 500;
-  padding: 8px 0;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s ease, border-bottom-color 0.2s ease;
+  font-size: 1rem; /* Explicitly set base font size */
+  padding: 8px 15px; /* Keep padding */
+  border-radius: 4px; /* Keep rounding */
+  transition: color 0.2s ease, font-size 0.2s ease; /* Update transition */
 }
 
-.app-nav a:hover,
-.app-nav a.active { /* You might need to use NavLink from react-router-dom for active class */
-  color: #ffffff;
-  border-bottom-color: #007bff; /* Highlight active/hover */
+.app-nav a:hover {
+  color: #000000; /* Black text on hover */
+  font-size: 1.4em; /* Slightly larger font on hover */
+  /* background-color: transparent; Ensure no background change */
+}
+
+.app-nav a.active {
+  color: #50acfd; /* Black text when active */
+  font-size: 1rem;  /* Keep default font size when active */
+  /* background-color: transparent; Ensure no background change */
 }
 
 /* Main Content Area */
@@ -95,6 +102,7 @@
   margin-bottom: 20px;
   padding-bottom: 15px;
   border-bottom: 1px solid #e9ecef;
+  text-align: left; /* Ensure content within section is left-aligned */
 }
 
 .sidebar-section:last-child {
@@ -104,20 +112,23 @@
 
 .sidebar-sticky-bottom {
   margin-top: auto; /* Pushes this section to the bottom */
-  padding-top: 15px;
+  padding-top: 15px; /* Keep original top padding */
   border-top: 1px solid #dee2e6;
   background-color: #f8f9fa; /* Match sidebar background */
-  position: sticky;
-  bottom: 0; /* Stick to the bottom of the sidebar container */
+  /* position: sticky; /* Remove sticky positioning */
+  /* bottom: 0; /* Remove sticky positioning */
+  /* Ensure it overlaps scrollbar potentially? */
+  /* width: calc(100% + 30px); /* Cover parent padding */
+  /* margin-left: -15px; */
 }
 
 .main-content {
   flex-grow: 1; /* Takes remaining space */
   padding: 15px;
-  border: 1px solid #dee2e6;
+  border: 1px solid #dee2e6; /* Original border */
   border-radius: 5px;
   overflow: auto; /* Scroll if content overflows */
-  background-color: #ffffff;
+  background-color: #ffffff; /* Original background */
 }
 
 .main-content h2 {
@@ -360,8 +371,22 @@
      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .react-flow__background {
-    background-color: #e9ecef; /* Match page background or choose another */
+    /* Change background to grey */
+    background-color: var(--bg-tertiary); /* #e9ecef */
 }
+
+/* Restore dot styling for contrast */
+.react-flow__background .react-flow__background-pattern circle {
+  /* fill: #adb5bd; /* Medium grey dots, increase contrast from default */
+  /* fill: var(--text-secondary); /* Use darker grey for high contrast */
+  /* fill: #04e700; /* User tried green */
+  fill: #000000; /* Use black for maximum contrast */
+  stroke: #000000; /* Also set stroke just in case */
+  opacity: 1; /* Ensure full opacity */
+  r: 1; /* Ensure radius is at least 1px */
+}
+
+
 
 /* Add new styles for the theme toggle in the navigation bar */
 .theme-toggle-container {
@@ -384,177 +409,7 @@
 }
 
 .theme-toggle-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Dark mode adjustments for components */
-[data-theme='dark'] .app-content {
-  background-color: #2c2c2c; /* Darker background for content */
-  color: #e0e0e0; /* Light text */
-  /* No change needed for translucency itself, but ensure contrast is good */
-  border: 1px solid var(--border-color);
-}
-
-[data-theme='dark'] .sidebar {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-theme='dark'] .main-content {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-theme='dark'] .table-node {
-  background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
-  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3), -3px -3px 5px rgba(75, 75, 75, 0.1);
-  border-color: var(--border-color);
-}
-
-[data-theme='dark'] .existing-tables-palette {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-[data-theme='dark'] .app-nav {
-  /* background-color: #212529; */ /* Even darker for dark mode */
-  background-color: rgba(33, 37, 41, 0.85); /* Darker translucent for dark mode (85% opacity) */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Adjust shadow for dark mode */
-  /* Position, width, z-index are already set */
-}
-
-/* Fix for dark mode select dropdown arrow */
-[data-theme='dark'] select {
-  background: var(--bg-secondary) url('data:image/svg+xml;charset=utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"%3E%3Cpath fill="%23f8f9fa" d="M2 0L0 2h4zm0 5L0 3h4z"/%3E%3C/svg%3E') no-repeat right .75rem center/8px 10px;
-}
-
-/* Dark mode adjustments for disabled buttons */
-[data-theme='dark'] button:disabled {
-  background-color: #4a4a4a; /* Lighter gray than dark background */
-  border-color: #5a5a5a;
-  color: #a0a0a0; /* Light gray text */
-  opacity: 0.8;
-}
-
-/* Specific style for the Analyze Normalization button when disabled */
-[data-theme='dark'] .sidebar-sticky-bottom button:disabled {
-  background-color: #4a4a4a;
-  border-color: #5a5a5a;
-  color: #a0a0a0;
-}
-
-/* Update the sidebar-sticky-bottom style for dark mode */
-[data-theme='dark'] .sidebar-sticky-bottom {
-  background-color: #343a40; /* Match dark theme secondary background */
-  border-top: 1px solid #495057; /* Match dark theme border color */
-}
-
-/* Fix the disabled buttons to prevent the white border/background */
-[data-theme='dark'] .sidebar-sticky-bottom button {
-  width: 100%; /* Ensure full width */
-  background-color: var(--button-bg);
-  border: 1px solid var(--button-bg);
-}
-
-/* Style for disabled buttons in dark mode */
-[data-theme='dark'] .sidebar-sticky-bottom button:disabled {
-  background-color: #4a5056 !important;
-  border-color: #575f67 !important;
-  color: #adb5bd !important;
-  width: 100%; /* Ensure full width */
-}
-
-/* Fix for the "Show Table Data" and similar buttons with specific styles */
-[data-theme='dark'] .sidebar-sticky-bottom button[style*="background"] {
-  border: 1px solid transparent;
-}
-
-/* Fix for disabled buttons with specific background colors */
-[data-theme='dark'] .sidebar-sticky-bottom button[style*="background"]:disabled {
-  background-color: #4a5056 !important;
-  border-color: #575f67 !important;
-  color: #adb5bd !important;
-}
-
-/* Ensure the green execute button maintains its color when enabled */
-[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(0, 230, 0)"] {
-  background-color: #00e600 !important;
-  border-color: #00e600 !important;
-}
-
-/* Ensure the yellow update button maintains its color when enabled */
-[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(230, 230, 0)"] {
-  background-color: #e6e600 !important;
-  border-color: #e6e600 !important;
-}
-
-/* Ensure the red delete button maintains its color when enabled */
-[data-theme='dark'] .sidebar-sticky-bottom button[style*="background: rgb(230, 0, 0)"] {
-  background-color: #e60000 !important;
-  border-color: #e60000 !important;
-}
-
-/* ReactFlow Dark Mode Overrides */
-[data-theme='dark'] .react-flow {
-  background-color: var(--bg-primary);
-}
-
-[data-theme='dark'] .react-flow__container {
-  background-color: var(--bg-primary);
-}
-
-[data-theme='dark'] .react-flow__background {
-  background-color: var(--bg-primary) !important;
-}
-
-[data-theme='dark'] .react-flow__background-pattern {
-  opacity: 0.4;
-}
-
-[data-theme='dark'] .react-flow__background .react-flow__background-pattern circle {
-  fill: var(--text-secondary);
-}
-
-[data-theme='dark'] .react-flow__minimap {
-  background-color: var(--bg-secondary);
-}
-
-[data-theme='dark'] .react-flow__controls {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-}
-
-[data-theme='dark'] .react-flow__controls-button {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  fill: var(--text-primary);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .react-flow__controls-button:hover {
-  background-color: var(--bg-tertiary);
-}
-
-[data-theme='dark'] .react-flow__controls-button svg {
-  fill: var(--text-primary);
-}
-
-[data-theme='dark'] .react-flow__panel {
-  background: var(--bg-secondary);
-}
-
-[data-theme='dark'] .react-flow__attribution {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .react-flow__minimap-mask {
-  fill: var(--bg-tertiary);
-}
-
-[data-theme='dark'] .react-flow__minimap-node {
-  fill: var(--text-primary);
-  stroke: var(--border-color);
+  transform: scale(1.1);
 }
 
 /* Landing Page Specific Styles */
@@ -563,7 +418,7 @@
   flex-direction: column;
   align-items: center; /* Center content horizontally */
   justify-content: center; /* Center content vertically */
-  min-height: calc(80vh - 50px); /* Example height, adjust as needed (subtract navbar height if fixed) */
+  min-height: calc(100vh - 50px); /* Make hero fill initial viewport height below navbar */
   text-align: center;
   padding: 40px 20px;
   /* background-color: #0b131a; */ /* Example dark background like Atlas */
@@ -608,6 +463,7 @@
   padding: 60px 20px; /* Increased padding */
   min-height: 50vh;
   background-color: var(--bg-primary);
+  
   text-align: center; /* Center the heading */
 }
 
@@ -670,21 +526,6 @@
   font-size: 0.95rem;
   color: var(--text-secondary);
   line-height: 1.4;
-}
-
-/* Dark Theme Adjustments for Cards */
-[data-theme='dark'] .feature-card {
-    background-color: #2c2c2c; /* Darker card background */
-    border-color: #444; /* Darker border */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-[data-theme='dark'] .feature-card:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme='dark'] .feature-icon {
-    color: #aaa; /* Lighter grey for icon placeholder */
 }
 
 /* Add a media query for smaller screens */
@@ -809,17 +650,6 @@
 .team-member-social a:hover {
   color: var(--link-hover-color);
 }
-
-/* Dark Theme Adjustments */
-[data-theme='dark'] .team-member-card {
-    background-color: #2c2c2c;
-    border-color: #444;
-}
-
-[data-theme='dark'] .team-member-photo-container {
-    background-color: #495057;
-}
-
 
 /* Remove or comment out media queries that change team-grid columns if you always want 5 */
 /* @media (max-width: 500px) { */

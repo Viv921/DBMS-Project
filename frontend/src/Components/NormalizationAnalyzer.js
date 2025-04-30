@@ -365,7 +365,7 @@ function NormalizationAnalyzer() {
                                       ))}
                                   </select>
                              </div>
-                              <button onClick={addFD} disabled={currentDeterminants.size === 0 || !currentDependent}>+ Add Dependency Rule</button>
+                              <button onClick={addFD} style={{ width: '100%'}} disabled={currentDeterminants.size === 0 || !currentDependent}>+ Add Dependency Rule</button>
                         </div>
                     </div>
                 )}

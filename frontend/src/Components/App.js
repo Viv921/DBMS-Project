@@ -6,29 +6,11 @@ import SchemaCanvas from './SchemaCanvas';
 import DataSelection from './DataSelection'
 import CrudOperations from './CrudOperations';
 import NormalizationAnalyzer from './NormalizationAnalyzer';
-import { ThemeContext, ThemeProvider } from './ThemeContext';
+import { ThemeProvider } from './ThemeContext';
 
 import '@xyflow/react/dist/style.css';
 
 import '../Styles/App.css';
-
-// Theme Toggle Component
-const ThemeToggle = () => {
-  const { theme, toggleTheme } = useContext(ThemeContext);
-  
-  return (
-    <div className="theme-toggle">
-      <button 
-        className="theme-toggle-btn" 
-        onClick={toggleTheme}
-        title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-      >
-        {theme === 'light' ? '🌙' : '☀️'}
-      </button>
-    </div>
-  );
-};
-
 
 // --- Main App Component ---
 function AppContent() {
@@ -42,7 +24,6 @@ function AppContent() {
             <li><NavLink to="/select">Select</NavLink></li>
             <li><NavLink to="/crud">CRUD</NavLink></li>
             <li><NavLink to="/normalization">Normalization</NavLink></li>
-            <li className="theme-toggle-container"><ThemeToggle /></li>
           </ul>
         </nav>
         <div className="app-content">

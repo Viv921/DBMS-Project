@@ -23,30 +23,6 @@
   --button-disabled-text: #ffffff;
 }
 
-/* Dark theme */
-[data-theme='dark'] {
-  --bg-primary: #212529;
-  --bg-secondary: #343a40;
-  --bg-tertiary: #495057;
-  --text-primary: #f8f9fa;
-  --text-secondary: #e9ecef;
-  --text-heading: #ffffff;
-  --border-color: #495057;
-  --link-color: #6ea8fe;
-  --link-hover-color: #9ec5fe;
-  --button-bg: #0d6efd;
-  --button-hover-bg: #0b5ed7;
-  --nav-bg: #1a1d20;
-  --nav-text: #f8f9fa;
-  --box-shadow: rgba(0, 0, 0, 0.4);
-  --input-border: #495057;
-  --input-focus-border: #0d6efd;
-  --striping-bg: rgba(255, 255, 255, 0.05);
-  --hover-bg: rgba(255, 255, 255, 0.1);
-  --button-disabled-bg: #4a5056;
-  --button-disabled-text: #adb5bd;
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -208,7 +184,6 @@ select {
 }
 
 ul {
-  padding-left: 20px;
   margin-top: 0;
   margin-bottom: 1rem;
 }

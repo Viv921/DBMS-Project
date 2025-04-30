@@ -487,14 +487,14 @@ function DataSelection() {
                         <div className='sidebar-section'>
                             <h5>Filters (WHERE)</h5>
                              {whereClauses.map((clause, index) => ( // Get index
-                                <React.Fragment key={clause.id}>
+                                <div key={clause.id} style={{ marginBottom: '10px'}}> 
                                      {/* Show AND/OR selector for clauses after the first one */}
                                      {index > 0 && (
-                                         <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em' }}>
+                                         <div style={{ margin: '0 0 5px 0', fontSize:'0.8em', display: 'flex', alignItems: 'center' }}> 
                                              <select
                                                  value={clause.connector || 'AND'} // Default display to AND
                                                  onChange={e => updateWhereClause(clause.id, 'connector', e.target.value)}
-                                                 style={{ padding:'2px', marginRight:'5px'}}
+                                                 style={{ padding:'2px', marginRight:'5px', paddingRight: '20px', minWidth: '70px' }} 
                                              >
                                                  <option value="AND">AND</option>
                                                  <option value="OR">OR</option>
@@ -503,7 +503,7 @@ function DataSelection() {
                                          </div>
                                      )}
                                      {/* The condition itself */}
-                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.9em', marginBottom: '5px' }}> 
                                         <select value={clause.table} onChange={e => updateWhereClause(clause.id, 'table', e.target.value)} style={{ maxWidth: '80px', marginRight:'3px' }}>
                                              <option value="">Table</option>
                                              {selectedTableNames.map(t => <option key={t} value={t}>{t}</option>)}
@@ -522,9 +522,9 @@ function DataSelection() {
                                         <input type="text" value={clause.value} onChange={e => updateWhereClause(clause.id, 'value', e.target.value)} placeholder="Value" style={{ flexGrow: 1, marginRight:'3px', minWidth: '50px' }} disabled={clause.operator === 'IS NULL' || clause.operator === 'IS NOT NULL'} />
                                         <button onClick={() => removeWhereClause(clause.id)} title="Remove condition" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
                                     </div>
-                                </React.Fragment>
+                                </div>
                             ))}
-                            <button onClick={addWhereClause} style={{ fontSize: '0.8em', marginLeft: '20px' }}>+ Add Filter Condition</button>
+                            <button onClick={addWhereClause} style={{ width: '100%', fontSize: '0.8em' }}>+ Add Filter Condition</button>
                         </div>
                     </div>
                 )}
@@ -560,7 +560,7 @@ function DataSelection() {
                                 <button onClick={() => removeAggregate(agg.id)} title="Remove aggregate" style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', padding: '0 5px' }}>X</button>
                             </div>
                          ))}
-                        <button onClick={addAggregate} style={{ fontSize: '0.8em' }}>+ Add Aggregate</button>
+                        <button onClick={addAggregate} style={{ width: '100%', fontSize: '0.8em' }}>+ Add Aggregate</button>
                     </div>
                 )}
   

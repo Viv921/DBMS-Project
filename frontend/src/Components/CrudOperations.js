@@ -323,7 +323,7 @@ function CrudOperations() {
                                 ))}
                             </div>
                         ))}
-                        <button onClick={addRow} style={{ marginTop: '5px', fontSize:'0.9em' }}>+ Add Another Row</button>
+                        <button onClick={addRow} style={{  width: '100%', marginTop: '5px', fontSize:'0.9em' }}>+ Add Another Row</button>
                     </div>
                 );
   

@@ -3,28 +3,17 @@ import React, { createContext, useState, useEffect } from 'react';
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  // Check localStorage for saved theme preference, default to 'light'
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'light';
-  });
+  // Always use 'light' theme
+  const theme = 'light';
 
-  // Function to toggle theme
-  const toggleTheme = () => {
-    setTheme(prevTheme => {
-      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', newTheme);
-      return newTheme;
-    });
-  };
-
-  // Apply theme to body on theme change
+  // Apply theme to body
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
-  }, [theme]);
+  }, [theme]); // Dependency array ensures this runs only once on mount with 'light' theme
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    // Provide only the theme value, no toggle function needed
+    <ThemeContext.Provider value={{ theme }}>
       {children}
     </ThemeContext.Provider>
   );
