@@ -344,7 +344,8 @@ function CrudOperations() {
                                               <select
                                                   value={clause.connector || 'AND'}
                                                   onChange={e => updateDmlWhereClause(clause.id, 'connector', e.target.value)}
-                                                  style={{ padding:'2px', marginRight:'5px'}}
+                                                  style={{ padding:'2px', marginRight:'5px', paddingRight: '2px', minWidth: '70px' }}
+
                                               >
                                                   <option value="AND">AND</option>
                                                   <option value="OR">OR</option>
@@ -353,7 +354,7 @@ function CrudOperations() {
                                           </div>
                                       )}
                                       {/* Render inputs for the condition */}
-                                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em'}}>
                                           {/* Column Dropdown */}
                                           <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
                                               <option value="">Column</option>
@@ -410,12 +411,12 @@ function CrudOperations() {
                                {/* Render AND/OR selector */}
                                 {index > 0 && (
                                     <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em' }}>
-                                        <select value={clause.connector || 'AND'} onChange={e => updateDmlWhereClause(clause.id, 'connector', e.target.value)} style={{ padding:'2px', marginRight:'5px'}}> <option value="AND">AND</option> <option value="OR">OR</option> </select>
+                                        <select value={clause.connector || 'AND'} onChange={e => updateDmlWhereClause(clause.id, 'connector', e.target.value)} style={{ padding:'2px', marginRight:'5px', paddingRight: '2px', minWidth: '70px' }}> <option value="AND">AND</option> <option value="OR">OR</option> </select>
                                          <span>Condition {index + 1}:</span>
                                     </div>
                                 )}
                                 {/* Render inputs for the condition */}
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em', paddingLeft: index > 0 ? '20px' : '0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.9em'}}>
                                     {/* Column Dropdown */}
                                      <select value={clause.column} onChange={e => updateDmlWhereClause(clause.id, 'column', e.target.value)} style={{ flexBasis: '100px', marginRight:'3px', flexShrink: 0 }}>
                                          <option value="">Column</option>

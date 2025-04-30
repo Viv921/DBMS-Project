@@ -639,7 +639,7 @@ function DataSelection() {
                              {whereClauses.map((clause, index) => (
                                 <div key={clause.id} style={{ marginBottom: '10px'}}>
                                      {index > 0 && (
-                                         <div style={{ margin: '0 0 5px 0', fontSize:'0.8em', display: 'flex', alignItems: 'center' }}>
+                                         <div style={{ margin: '5px 0 5px 20px', fontSize:'0.8em', display: 'flex', alignItems: 'center' }}>
                                              <select
                                                  value={clause.connector || 'AND'}
                                                  onChange={e => updateWhereClause(clause.id, 'connector', e.target.value)}
@@ -740,7 +740,7 @@ function DataSelection() {
                             <div key={clause.id} style={{ marginBottom: '10px'}}>
                                 {index > 0 && (
                                      // Mimicking WHERE connector style
-                                     <div style={{ margin: '0 0 5px 0', fontSize:'0.8em', display: 'flex', alignItems: 'center' }}>
+                                     <div style={{ margin: '5px 0px 5px 20px', fontSize:'0.8em', display: 'flex', alignItems: 'center' }}>
                                          <select
                                              value={clause.connector || 'AND'}
                                              onChange={e => updateHavingClause(clause.id, 'connector', e.target.value)}
