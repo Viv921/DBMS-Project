@@ -11,6 +11,20 @@ const ALLOWED_AGGREGATES = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
 const ALLOWED_OPERATORS = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'NOT LIKE', 'IS NULL', 'IS NOT NULL'];
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'];
 
+// --- NEW: CSV Export Helper Function ---
+const escapeCsvCell = (cell) => {
+    if (cell == null) { // handles null and undefined
+        return '';
+    }
+    const cellStr = String(cell);
+    // Check if the cell contains characters that require quoting (, " \n)
+    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+        // Enclose in double quotes and escape existing double quotes by doubling them
+        return `"${cellStr.replace(/"/g, '""')}"`;
+    }
+    return cellStr;
+};
+
 // --- Data Selection Component --- (UPDATED with HAVING and ORDER BY - Attempt 2: Preserve Visuals) ---
 function DataSelection() {
     const [allTables, setAllTables] = useState([]);
@@ -107,7 +121,8 @@ function DataSelection() {
                 // console.log(`Deselecting table: ${tableName}`);
                 const aliasToRemove = aggregates.filter(a => a.table === tableName).map(a => a.alias).filter(Boolean); // Get aliases from the removed table
                 const columnsToRemove = groupByColumns.forEach(gc => gc.startsWith(`${tableName}.`) ? gc : undefined); // Get grouped columns from the removed table
-
+                setQueryResults(null);
+                setQueryError(null);
                 delete newSelected[tableName];
                 // Clean up related clauses
                 setJoins(prev => prev.filter(j => j.leftTable !== tableName && j.rightTable !== tableName));
@@ -152,7 +167,8 @@ function DataSelection() {
             const currentTable = prevSelected[tableName];
             const newSelectedColumns = new Set(currentTable.selectedColumns);
             const qualifiedCol = `${tableName}.${columnName}`;
-
+            setQueryResults(null);
+            setQueryError(null);
             if (newSelectedColumns.has(columnName)) {
                 newSelectedColumns.delete(columnName);
                 // Also remove from Group By and Order By if it was there
@@ -190,8 +206,14 @@ function DataSelection() {
             }
             return j;
         }));
+        setQueryResults(null);
+        setQueryError(null);
     };
-    const removeJoin = (id) => setJoins(prev => prev.filter(j => j.id !== id));
+    const removeJoin = (id) => {
+        setJoins(prev => prev.filter(j => j.id !== id));
+        setQueryResults(null);
+        setQueryError(null);
+    };
 
     // Where Clauses (Original logic)
     const addWhereClause = () => setWhereClauses(prev => [
@@ -217,6 +239,8 @@ function DataSelection() {
           }
           return w;
       }));
+      setQueryResults(null);
+      setQueryError(null);
     };
     const removeWhereClause = (id) => {
       setWhereClauses(prev => {
@@ -226,6 +250,8 @@ function DataSelection() {
           }
           return remaining;
       });
+      setQueryResults(null);
+      setQueryError(null);
     };
 
     // Aggregates - *Includes necessary cleanup logic for new state*
@@ -260,6 +286,8 @@ function DataSelection() {
              setHavingClauses(prev => prev.map(h => h.columnOrAlias === oldAlias ? { ...h, columnOrAlias: newAlias } : h));
              setOrderByClauses(prev => prev.map(o => o.term === oldAlias ? { ...o, term: newAlias } : o));
          }
+        setQueryResults(null);
+        setQueryError(null);
     };
     const removeAggregate = (id) => {
         const aliasToRemove = aggregates.find(a => a.id === id)?.alias;
@@ -275,7 +303,8 @@ function DataSelection() {
              setHavingClauses(prev => prev.filter(h => h.columnOrAlias !== aliasToRemove));
              setOrderByClauses(prev => prev.filter(o => o.term !== aliasToRemove));
         }
-         // --- End essential cleanup ---
+        setQueryResults(null);
+        setQueryError(null);
     };
 
     // Group By - *Includes necessary cleanup logic for new state*
@@ -301,6 +330,8 @@ function DataSelection() {
             }
             return newSet;
          });
+        setQueryResults(null);
+        setQueryError(null);
     };
 
     // --- NEW Handler Functions for HAVING and ORDER BY ---
@@ -329,6 +360,8 @@ function DataSelection() {
           }
           return h;
       }));
+      setQueryResults(null);
+      setQueryError(null);
     };
     const removeHavingClause = (id) => {
       setHavingClauses(prev => {
@@ -338,14 +371,21 @@ function DataSelection() {
           }
           return remaining;
       });
+      setQueryResults(null);
+      setQueryError(null);
     };
 
     // Order By Clauses
     const addOrderByClause = () => setOrderByClauses(prev => [...prev, { id: uuidv4(), term: '', direction: 'ASC' }]);
     const updateOrderByClause = (id, field, value) => {
         setOrderByClauses(prev => prev.map(o => o.id === id ? { ...o, [field]: value } : o));
+        setQueryResults(null);
+        setQueryError(null);
     };
-    const removeOrderByClause = (id) => setOrderByClauses(prev => prev.filter(o => o.id !== id));
+    const removeOrderByClause = (id) => {setOrderByClauses(prev => prev.filter(o => o.id !== id));
+        setQueryResults(null);
+        setQueryError(null);
+    };
 
     // --- Helper Functions for Dropdowns/Availability ---
 
@@ -510,6 +550,40 @@ function DataSelection() {
 
     }, [selectedTables, joins, whereClauses, aggregates, groupByColumns, havingClauses, orderByClauses]); // Keep dependencies including new state
 
+    // --- NEW: Export to CSV Function ---
+    const exportToCsv = useCallback(() => {
+        if (!queryResults || !queryResults.columns || !queryResults.rows || queryResults.rows.length === 0) {
+            console.error("No data available to export.");
+            return;
+        }
+
+        const { columns, rows } = queryResults;
+
+        // Create header row
+        const header = columns.map(escapeCsvCell).join(',');
+
+        // Create data rows
+        const csvRows = rows.map(row =>
+            row.map(escapeCsvCell).join(',')
+        );
+
+        // Combine header and rows
+        const csvString = [header, ...csvRows].join('\n');
+
+        // Create Blob and trigger download
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'query_results.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url); // Clean up
+
+    }, [queryResults]); // Dependency on queryResults
+
     // --- UI Rendering ---
     const selectedTableNames = Object.keys(selectedTables);
     const requiresJoin = selectedTableNames.length > 1 && joins.filter(j => j.leftTable && j.leftCol && j.rightTable && j.rightCol && j.type).length === 0;
@@ -530,6 +604,9 @@ function DataSelection() {
                               requiresJoin ||
                               (havingClauses.length > 0 && !(groupByColumns.size > 0 || aggregates.length > 0)); // Added HAVING validation
 
+
+    const showExportButton = queryResults && queryResults.rows && queryResults.rows.length > 0;
+    
     return (
         <div className='component-layout'> {/* Using original top-level structure */}
             {/* Sidebar */}
@@ -819,9 +896,26 @@ function DataSelection() {
                   </div>
               </div> {/* End Sidebar */}
 
-            {/* --- Main Content Area - Results (Original Structure) --- */}
+            {/* Main Content Area - Results */}
             <div className='main-content'>
-                <h2>Query Results</h2>
+                {/* --- NEW: Header container for Title and Export Button --- */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h2>Query Results</h2>
+                    {/* --- NEW: Conditional Export Button --- */}
+                    {showExportButton && (
+                        <button
+                            onClick={exportToCsv}
+                            title="Export results to CSV"
+                            style={{
+                                padding: '5px 10px',
+                                cursor: 'pointer',
+
+                            }}
+                        >
+                            Export CSV
+                        </button>
+                    )}
+                </div>
                 {isQuerying && <p>Executing query...</p>}
                 {queryError && <p className='error-message'>Query Error: {queryError}</p>}
                 {queryResults ? (
